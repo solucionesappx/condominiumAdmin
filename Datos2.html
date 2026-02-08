@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>ZXC - Datos</title>
+    <script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        html { font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent; }
+        :root { --bg: #1f2937;--txt: #f3f4f6;--surf: #374151;--p-soft: #60a5fa;--th: #374151; }
+        .light-mode { --bg: #f9fafb; --txt: #111827; --surf: #ffffff; } 
+        .light-mode header, .light-mode footer { border-color: #e5e7eb; }
+        html, body { background-color: var(--bg); color: var(--txt); transition: background .3s, color .3s; }   
+        #app-container { width:100%; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; box-shadow:0 0 20px rgba(0,0,0,.2); position:relative; transition:max-width .4s ease-in-out; }
+        #app-container { background-color: var(--bg); }
+        .mode-mobile { max-width:500px; }
+        .mode-desktop { max-width:100%!important; }
+        header, footer { width:100%; max-width:inherit; z-index:50; left:50%; transform:translateX(-50%); position:fixed; background:var(--surf); border-color:#4b5563; }
+        header, .footer-tienda { background: #374151 !important;color: #f3f4f6 !important;border-color: #4b5563 !important;}
+        header h1 { color: white !important; }       
+        main { flex-grow:1; overflow-y:auto; padding:76px 1rem 72px; }
+        .footer-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:.75rem; color:var(--txt); cursor:pointer; transition:color .2s; }
+        .footer-btn:hover { color:#152c94; }
+        .footer-btn.active { color:var(--p-soft); font-weight:700; }
+        .modal-overlay { position:fixed; inset:0; background:rgba(17,24,39,.8); backdrop-filter:blur(4px); z-index:100; display:flex; justify-content:center; align-items:center; }
+        .modal-content { background:var(--surf); border:1px solid #4b5563; border-radius:1rem; width:90%; max-width:320px; }
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .hidden { display: none !important; }
+    </style>
+    <style>    
+        /* Estilos específicos para las métricas y buscador*/
+        .metric-card { width: 33.333333%; padding-top: 0; padding-bottom: 0; padding-left: 0.375rem; padding-right: 0.375rem; border-radius: 0.75rem; background-color: var(--bg); display: flex; align-items: center; gap: 0.5rem; }
+        .search-actions-container { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; width: 100%; }
+        .search-input-wrapper { position: relative; flex-grow: 1; border-radius: 0.75rem; }      
+        .search-input-wrapper input { width: 100%; padding-left: 2.5rem; padding-right: 1rem;  padding-top: 0.5rem; padding-bottom: 0.5rem;  border-radius: 0.75rem; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06); }
+        .search-input-wrapper input { background-color: #374151; color: #f3f4f6; border: 1px solid #4b5563; transition: border-color 0.15s, box-shadow 0.15s; outline: none; }
+        .search-input-wrapper input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px #3b82f6; }
+        .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #9ca3af; }
+        .search-highlight { background-color: rgba(59, 130, 246, 0.4); color: #ffffff; border-radius: 2px; padding: 0 2px; font-weight: bold; }
+        /* Estilos específicos para la tabla */       
+        .table-scroll-container { max-height: calc(96vh - 350px); overflow-x: auto; overflow-y: auto; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1); display: block; border: 1px solid #4b5563; }
+        .table-scroll-container table { border-collapse: collapse; table-layout: auto; width: max-content; min-width: 100%; }
+        .table-scroll-container th { color: #137be2; position: sticky; top: 0; z-index: 20; background-color: var(--th); padding: 0.25rem 0.5rem; text-align: center !important; white-space: nowrap; font-size: 0.75rem; border-bottom: 1px solid rgba(255, 255, 255, 0.2); cursor: pointer; text-transform: uppercase; }
+        .sticky-id-cell { position: sticky; left: 0; z-index: 40; font-weight: bold; text-align: center; border-right: 1px solid rgba(255, 255, 255, 0.2); }
+        .table-scroll-container th.sticky-id-cell { color: #137be2; background-color: var(--th); border-bottom: 1px solid rgba(255, 255, 255, 0.2); z-index: 40; }
+        .table-data-cell.sticky-id-cell { color: #137be2; background-color: var(--th); font-size: 0.75rem; }
+        .table-data-cell { height: 24px; font-size: 0.75rem; padding-top: 0.25rem; padding-bottom: 0.25rem; white-space: nowrap; transition: background-color 0.15s, color 0.15s, border-color 0.15s; border-bottom: 1px solid #4b5563;}
+        .header-content { display: flex; align-items: center; justify-content: center; gap: 4px; }
+        .row-warning-text .table-data-cell { color: #fcd34d; }
+        .row-alert-text .table-data-cell { background-color: #582b2b; color: #fca5a5; font-weight: 600; }
+        #table-selector { appearance: none; -webkit-appearance: none; padding-right: 20px; background-repeat: no-repeat; background-position: right center; background-size: 14px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); }
+        #table-selector option { font-size: 14px; padding: 12px; background-color: #1f2937; color: white; }
+    </style>
+</head>
+<body class="dark">
+    <div id="app-container" class="mode-mobile shadow-xl">
+        <header class="top-0 h-14 border-b flex items-center justify-between px-6">
+            <h1 class="text-xl font-bold text-white truncate mr-2">Cargando...</h1>
+            <div class="flex items-center gap-3">
+                <button class="p-2" onclick="toggleView()"><div id="view-icon-container"></div></button>
+                <button class="p-2 text-red-400 rounded-full hover:bg-gray-600" onclick="logout()"><i data-lucide="log-out" class="w-6 h-6"></i></button>
+            </div>
+        </header>
+
+        <main id="main-content">
+            <div id="scroll-container" class="flex flex-col">
+                <div id="data-view-container" class="w-full mt-0">
+                    <h2 class="text-blue-500 text-xl font-bold pb-2 flex items-center gap-2 border-b 3px">
+                        Gestión de Datos: 
+                        <span id="header-tienda-id" class="text-xl font-bold text-gray-200"></span>
+                    </h2>
+                    <div class="flex justify-between space-x-2 p-4">
+                        <div id="metric-total-records" class="metric-card flex-1"> 
+                            <i data-lucide="building" class="w-7 h-7 text-blue-500 flex-shrink-0"></i> 
+                            <div class="flex flex-col"> 
+                                <span class="text-xl font-extrabold text-blue-500 leading-none block" data-metric="total">0</span> 
+                                <span class="text-xs text-gray-300 leading-none block max-w-16">Unidades</span> 
+                            </div> 
+                        </div> 
+                        <div class="metric-card flex-1"> 
+                            <i data-lucide="user-minus" class="w-6 h-6 text-red-500 flex-shrink-0"></i> 
+                            <div class="flex flex-col"> 
+                                <span class="text-xl font-extrabold text-red-500 leading-none block" data-metric="Morosos">0</span> 
+                                <span class="text-xs text-gray-300 leading-none block max-w-16">Morosos</span> 
+                            </div> 
+                        </div> 
+                        <div class="metric-card flex-1"> 
+                            <i data-lucide="user-check" class="w-6 h-6 text-green-500 flex-shrink-0"></i> 
+                            <div class="flex flex-col"> 
+                                <span class="text-xl font-extrabold text-green-500 leading-none block" data-metric="Solventes">0</span> 
+                                <span class="text-xs text-gray-300 leading-none block max-w-16">Solventes</span> 
+                            </div> 
+                        </div> 
+                    </div>
+                </div>
+
+                <div id="search-container" class="search-actions-container">
+                    <div class="search-input-wrapper">
+                        <input type="text" id="search-input" placeholder="Buscar por Nombre, Apartamento,.."
+                            class="w-full rounded-xl shadow-inner text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
+                            autocomplete="off">
+                        <i data-lucide="search" class="search-icon w-5 h-5 text-gray-500 dark:text-gray-300"></i>
+                    </div>
+                    <button id="clear-search-btn" class="p-2.5 rounded-full text-red-500 hover:bg-gray-700 transition duration-150" title="Reiniciar Filtros y Ordenación">
+                        <i data-lucide="x-circle" class="w-8 h-8"></i>
+                    </button>
+                    <button id="reload-icon" class="p-2 rounded-full text-blue-400 hover:bg-gray-700 transition duration-150" title="Recargar Datos (Omitir Caché)">
+                        <i data-lucide="refresh-cw" class="w-8 h-8"></i>
+                    </button>
+                </div>
+                
+                <div id="data-table-wrapper" class="mt-8 flex-grow relative min-h-[400px]">
+                    <div id="global-loader" class="hidden absolute inset-0 z-[50] flex items-center justify-center rounded-xl">
+                        <div class="flex flex-col items-center p-8 bg-gray-800/95 border border-blue-500/40 rounded-2xl shadow-2xl max-h-[40%] h-[400px] min-w-[460px] max-w-[90%] transform -translate-y-4">
+                            <div class="relative mb-4">
+                                <i data-lucide="loader-2" class="w-10 h-10 text-blue-400 animate-spin"></i>
+                            </div>
+                            <span class="text-blue-400 font-bold text-sm tracking-wider uppercase text-center">Cargando Base de Datos</span>
+                            <p class="text-gray-400 text-[10px] mt-2 text-center leading-relaxed">Sincronizando registros con GAS<br>Por favor, espere.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-3 pb-2 border-b border-gray-700/30">
+    
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                            <i data-lucide="layers" class="w-5 h-5 text-blue-400 shrink-0"></i>
+                            <div class="relative w-full max-w-[300px]"> 
+                                <select id="table-selector" 
+                                    class="bg-transparent text-xl font-semibold text-white focus:outline-none cursor-pointer border-none appearance-none pr-8 w-full truncate">
+                                    <option value="" disabled selected>Cargando Datos... </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 shrink-0 ml-4">
+                            <span id="table-status-tag" 
+                                class="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase tracking-tighter whitespace-nowrap">
+                                Buscando...
+                            </span>
+                            
+                            <div class="h-4 w-[1px] bg-gray-700"></div> <button onclick="showRegisterMode()" 
+                                class="text-green-400 hover:scale-110 transition-transform p-1 flex items-center justify-center" 
+                                title="Nuevo Registro">
+                                <i data-lucide="file-plus-2" class="w-6 h-6"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="data-table-container" class="table-scroll-container"></div>
+                </div>
+            </div>
+        </main>
+
+        <footer id="app-footer" class="bottom-0 h-18 border-t flex items-center justify-around px-2 py-1">
+            <button class="footer-btn" data-section="Base"><i data-lucide="house-plus" class="w-6 h-6"></i><span>Base</span></button>
+            <button id="btn-datos" class="footer-btn active" data-section="Datos"><i data-lucide="database" class="w-6 h-6"></i><span>Datos</span></button>
+            <button id="btn-agregar" class="footer-btn" data-section="Agregar"><i data-lucide="plus-circle" class="w-6 h-6"></i><span>Agregar</span></button>
+            <button class="footer-btn" data-section="Perfil"><i data-lucide="user" class="w-6 h-6"></i><span>Perfil</span></button>
+            <button class="footer-btn" data-section="Configuracion"><i data-lucide="settings" class="w-6 h-6"></i><span>Config</span></button>
+        </footer>
+    </div>
+
+    <div id="system-modal" class="hidden modal-overlay">
+        <div class="modal-content p-6 text-center">
+            <div id="sys-modal-icon" class="mb-4 flex justify-center"></div>
+            <h3 id="sys-modal-title" class="text-lg font-bold text-white mb-2"></h3>
+            <p id="sys-modal-text" class="text-gray-400 text-sm mb-6"></p>
+            <div id="sys-modal-actions" class="flex gap-3 justify-center"></div>
+        </div>
+    </div>
+
+    <script>
+        const KEYS={NOMBRE:'Usuario_Nombre',PERFIL:'Usuario_Perfil',CORREO:'Usuario_Correo',VIEW_MODE:'App_View_Mode',THEME:'App_Theme',TIENDA:'Usuario_Tienda',TIENDA_ID:'Usuario_Tienda_ID',USUARIO_ID:'Usuario_ID'};
+        document.addEventListener('DOMContentLoaded',()=>{if(!localStorage.getItem(KEYS.CORREO))window.location.replace('index.html');initUI();if(window.lucide)lucide.createIcons()});
+        function initUI(){
+            const nom = localStorage.getItem(KEYS.NOMBRE);
+            if(nom) document.querySelector('h1').textContent = `¡Hola, ${nom.trim().split(/\s+/)[0]}!`;
+            applyViewMode(localStorage.getItem(KEYS.VIEW_MODE) || 'mobile');
+            document.querySelectorAll('.footer-btn').forEach(b => b.onclick = () => loadContent(b.getAttribute('data-section')));
+            if(!localStorage.getItem(KEYS.INPUT_ID)){['btn-agregar'].forEach(id => {const el = document.getElementById(id);if(el) el.classList.add('btn-disabled'); });}
+        }
+        function toggleView(){const m=localStorage.getItem(KEYS.VIEW_MODE)==='desktop'?'mobile':'desktop';localStorage.setItem(KEYS.VIEW_MODE,m);applyViewMode(m)}
+        function applyViewMode(m){
+            const c=document.getElementById('app-container'),i=document.getElementById('view-icon-container');
+            if(m==='desktop'){c.classList.replace('mode-mobile','mode-desktop');i.innerHTML='<i data-lucide="smartphone" class="w-5 h-5 text-blue-400"></i>'}
+            else{c.classList.replace('mode-desktop','mode-mobile');i.innerHTML='<i data-lucide="monitor" class="w-5 h-5 text-emerald-400"></i>'}
+            if(window.lucide)lucide.createIcons();
+        }
+        async function loadContent(s){
+            const NAV={'Base':'Base2.html','Inicio':'Inicio.html','Datos': 'Datos2.html','Agregar':'AgregarDat.html','Perfil':'PerfilUser2.html','Configuracion':'ConfigApp2.html'};
+            if(['Agregar'].includes(s) && !localStorage.getItem(KEYS.INPUT_ID)){return showSystemModal({title:'Acceso Imposible', text:'Registre el dato CLAVE para su búsqueda en la sección correspondiente.', type:'warning'});}    
+            if(s==='Configuracion' && localStorage.getItem(KEYS.PERFIL)!=='Admin') return showSystemModal({title:'Acceso Denegado',text:'Solo administradores.',type:'warning'});
+            if(NAV[s]) window.location.href=NAV[s];
+        }     
+        function showSystemModal({title,text,type='info'}){
+            return new Promise(res=>{
+                const m=document.getElementById('system-modal'),ti=document.getElementById('sys-modal-title'),te=document.getElementById('sys-modal-text'),ic=document.getElementById('sys-modal-icon'),ac=document.getElementById('sys-modal-actions');
+                ti.textContent=title;te.textContent=text;const colors={warning:'text-amber-400',info:'text-blue-400'},icons={warning:'alert-triangle',info:'info'};
+                ic.innerHTML=`<i data-lucide="${icons[type]}" class="w-12 h-12 ${colors[type]}"></i>`;ac.innerHTML='';
+                const b=document.createElement('button');b.className='px-6 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold';b.textContent='Aceptar';
+                b.onclick=()=>{m.classList.add('hidden');res(true)};ac.appendChild(b);m.classList.remove('hidden');lucide.createIcons();
+            });
+        }
+        function toggleTheme() {
+            const isLight = document.documentElement.classList.toggle('light-mode');
+            localStorage.setItem(KEYS.THEME, isLight ? 'light' : 'dark');
+            renderTiendaFooter();
+            if(window.lucide) lucide.createIcons();
+        }
+        function applyTheme() {
+            const theme = localStorage.getItem(KEYS.THEME) || 'dark';
+            if (theme === 'light') {document.documentElement.classList.add('light-mode');} 
+            else {document.documentElement.classList.remove('light-mode');}
+        }
+        function toggleGlobalLoader(show) {
+            const loader = document.getElementById('global-loader');
+            if (loader) { loader.classList.toggle('hidden', !show);
+            if (show && window.lucide) lucide.createIcons(); }
+        }
+        function formatNumberWithDots(v) {
+            if (!v && v !== 0) return '';
+            const number = parseFloat(String(v).replace(',', '.'));
+            if (isNaN(number)) return v;
+            const decimals = Math.abs(number - Math.round(number)) < 0.001 ? 0 : 2;
+            return new Intl.NumberFormat('es-ES', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(number);
+        }
+        function formatDate(v) {
+            if (!v) return 'N/A';
+            const d = new Date(v);
+            if (isNaN(d.getTime())) return v;
+            const day = d.getUTCDate().toString().padStart(2, '0');
+            const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+            return `${day}/${month}/${d.getUTCFullYear()}`;
+        }
+        function formatDateTime(v) {
+            if (!v) return 'N/A';
+            const d = new Date(v);
+            if (isNaN(d.getTime())) return v;
+            const datePart = formatDate(v);
+            const timePart = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            return `${datePart} ${timePart}`;
+        }
+        function getFormattedValue(key, value) {
+            if (value === null || value === undefined || value === '') return '';
+            const cleanKey = String(key).toUpperCase();           
+            if (cleanKey.includes('REGISTRODATA')) { return formatDateTime(value);}
+            if (cleanKey.includes('FECHA')) { return formatDate(value);}
+            const isPotentiallyNumber = typeof value === 'number' || 
+                (!isNaN(parseFloat(value)) && isFinite(value) && String(value).length < 15);
+            if (isPotentiallyNumber && !cleanKey.includes('ID') && !cleanKey.includes('DATA')) {
+                return formatNumberWithDots(value);}
+            return value;
+        }
+        async function loadTableFriendlyNames() {
+            const userTienda = localStorage.getItem(KEYS.TIENDA) || 'DEFAULT';
+            try { const r = await fetch(`${GET_URL}?action=getTableFriendlyNames&appTienda=${userTienda}`); const res = await r.json();
+                if (res.success) {localStorage.setItem('TABLE_FRIENDLY_NAMES', JSON.stringify(res.data));}
+            } catch (e) { console.error("Error cargando nombres amigables:", e);}
+        }
+        function getFriendlyName(techName) {
+            const namesMap = JSON.parse(localStorage.getItem('TABLE_FRIENDLY_NAMES') || '{}');
+            return namesMap[techName]?.label || techName;
+        }
+        function logout(){localStorage.clear();window.location.href='index.html'}  
+
+console.group("🔍 REVISIÓN DE LOCALSTORAGE");
+console.log("👤 Datos de Usuario (KEYS):");
+Object.entries(KEYS).forEach(([key, storageKey]) => {
+    console.log(`   ${key}: ${localStorage.getItem(storageKey)}`);
+});
+
+console.log("📊 Configuración de Tabla (TABLE_CONFIG):");
+console.table(JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}'));
+
+console.log("📝 Datos de la Fila (TABLE_DATA):");
+console.table(JSON.parse(localStorage.getItem('TABLE_DATA') || '{}'));
+console.groupEnd();        
+
+    </script>
+
+    <script>
+        const GET_URL = 'https://script.google.com/macros/s/AKfycbyVcnPmbbR9RXy6ekkvHT6ocTgm0Rsf1wxNQvQpSbEt7ubGVwBhxKqhNm0YeO_dI_XJIg/exec';
+        const DEFAULT_TABLE_NAME = 'TD101_BASIC'; 
+        let currentTableName = localStorage.getItem('LAST_VISITED_TABLE') || DEFAULT_TABLE_NAME;
+        let availableTablesList = [];        
+        let originalData = []; 
+        let rawConfig = []; 
+        let tableConfig = { columnOrder: [], displayMap: {}, alignMap: {} };
+        let sortConfig = { key: null, direction: null };
+        let currentSearchTerm = ""; 
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initDataApp();
+            setupSearch();
+            const btnReload = document.getElementById('reload-icon');
+            if(btnReload) btnReload.onclick = () => fetchData(currentTableName);
+        });
+    
+        function showRegisterMode() {
+            const tableKey = String(currentTableName).trim().toUpperCase();
+            const tablePrefix = tableKey.split('_')[0];
+            const configMap = {};
+            const rawHeaders = tableConfig.columnOrder || (originalData.length > 0 ? Object.keys(originalData[0]) : []);
+            
+            rawHeaders.forEach(h => {
+                const colKey = String(h).trim().toUpperCase();
+                const colConfig = rawConfig.find(c => 
+                    String(c.ID_Columna || '').trim().toUpperCase() === colKey && 
+                    String(c.Tabla || '').trim().toUpperCase() === tableKey
+                );                
+                const marca = colConfig ? String(colConfig.Visible_Encabezado || '').trim().toUpperCase() : '';
+                const cleanH = colKey.replace(/_/g, '');
+                if (marca === 'NO') return; // Exclusión total del formulario
+                const isBlocked = (marca === 'XX') || 
+                                cleanH.includes('REGISTRO') || 
+                                cleanH === `${tablePrefix}DAT01` || 
+                                cleanH === `${tablePrefix}NOMBREC` //||
+                                //cleanH === `${tablePrefix}ID`;
+                configMap[h] = {
+                    label: tableConfig.displayMap[h] || h,
+                    editable: !isBlocked
+                };
+            });
+
+            localStorage.setItem('TABLE_CONFIG', JSON.stringify(configMap));
+            localStorage.setItem('TABLE_DATA', JSON.stringify({ 
+                TABLA_ORIGEN: currentTableName, 
+                IS_NEW: true 
+            }));           
+            window.location.href = 'FormData3.html';
+        }
+
+        function updateTableSelector(tables) {
+            const selector = document.getElementById('table-selector');
+            if (!selector) return;
+
+            if (availableTablesList.join(',') !== tables.join(',')) {
+                availableTablesList = tables;
+                selector.innerHTML = tables.map(name => {
+                    const label = getFriendlyName(name);
+                    return `<option value="${name}" ${name === currentTableName ? 'selected' : ''}>${label}</option>`;
+                }).join('');
+            }
+            selector.onchange = (e) => {
+                fetchData(e.target.value);
+            };
+        }
+
+        async function fetchData(tableName) {
+            const selector = document.getElementById('table-selector');
+            if (selector) selector.disabled = true; 
+            if (typeof toggleGlobalLoader === 'function') toggleGlobalLoader(true); 
+            await loadTableFriendlyNames();
+            const userTienda = localStorage.getItem(KEYS.TIENDA) || 'DEFAULT';           
+            const url = `${GET_URL}?tableName=${encodeURIComponent(tableName)}&userTienda=${encodeURIComponent(userTienda)}`;
+            try {
+                const response = await fetch(url);               
+                if (!response.ok) throw new Error(`Error de red: ${response.status}`);               
+                const res = await response.json();
+                
+                if (res.success) {
+                    currentTableName = tableName;
+                    localStorage.setItem('LAST_VISITED_TABLE', tableName); 
+                    originalData = res.data || [];
+                    rawConfig = res.config || []; 
+                    currentSearchTerm = "";
+                    const searchInput = document.getElementById('search-input');
+                    if (searchInput) searchInput.value = "";
+                    if (res.availableTables) {
+                        updateTableSelector(res.availableTables);
+                    }
+                    updateStatusTag(tableName);
+                    if (selector) selector.value = tableName;
+                    tableConfig.columnOrder = res.columnOrder || (originalData.length > 0 ? Object.keys(originalData[0]) : []);
+                    tableConfig.displayMap = res.displayMap || {};
+                    tableConfig.alignMap = res.alignMap || {};
+                    renderTable(originalData);
+                    updateMetrics(originalData);
+                    if (window.lucide) lucide.createIcons();                   
+                } else {
+                    const errorMsg = res.message || res.error || "Error desconocido en el servidor";
+                    if (typeof showSystemModal === 'function') {
+                        showSystemModal({ title: 'Atención', text: errorMsg, type: 'warning' });
+                    } else {
+                        alert("Error: " + errorMsg);
+                    }
+                }
+            } catch (err) {
+                console.error("Error crítico en fetchData:", err);
+                if (typeof showSystemModal === 'function') {
+                    showSystemModal({ title: 'Error de Conexión', text: "No se pudo establecer comunicación con el servidor.", type: 'warning' });
+                }
+            } finally {
+                if (selector) selector.disabled = false; 
+                if (typeof toggleGlobalLoader === 'function') toggleGlobalLoader(false);
+            }
+        }
+
+        function renderTable(data) {
+            const container = document.getElementById('data-table-container');
+            if (!container) return;
+            container.innerHTML = `
+                <table id="main-table">
+                    <thead><tr id="table-header"></tr></thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            `;
+            const tableHeader = document.getElementById('table-header');
+            const tableBody = document.getElementById('table-body');
+            const tableKey = String(currentTableName).trim().toUpperCase();
+            const tablePrefix = tableKey.split('_')[0];
+            const headers = tableConfig.columnOrder; 
+            const thId = document.createElement('th');
+            thId.className = 'sticky-id-cell';
+            thId.innerHTML = `<div class="header-content" style="justify-content: center;"><span>#</span></div>`;
+            tableHeader.appendChild(thId);
+            // Dibujar encabezados (EXCEPTO TYPEREG y el ID técnico)
+            headers.forEach(h => {
+                const cleanH = h.toUpperCase();
+                // ESTÉTICA: No creamos encabezado para TYPEREG ni para el ID
+                if (cleanH === `${tablePrefix}ID` || cleanH.endsWith('TYPEREG')) return;
+                const th = document.createElement('th');
+                const friendlyName = tableConfig.displayMap[h] || h;
+                let iconName = sortConfig.key === h ? (sortConfig.direction === 'desc' ? 'chevron-down' : 'chevron-up') : 'chevrons-up-down';               
+                th.innerHTML = `
+                    <div class="header-content" style="justify-content: center;">
+                        <span>${friendlyName}</span>
+                        <i data-lucide="${iconName}" class="w-4 h-4 opacity-30"></i>
+                    </div>`;
+                th.onclick = () => handleSort(h);
+                tableHeader.appendChild(th);
+            });
+
+            data.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                const typeRegKey = Object.keys(row).find(k => k.toUpperCase().endsWith('TYPEREG'));
+                const isBlocked = typeRegKey && String(row[typeRegKey]).toUpperCase() === 'BLOQUEADO';
+                // Aplicamos clases de Tailwind: si está bloqueado, texto rojo
+                tr.className = `cursor-pointer transition-colors group ${
+                    isBlocked 
+                    ? 'opacity-80 bg-red-500/5 text-red-500 hover:bg-red-500/10 hover:opacity-100' 
+                    : 'hover:bg-blue-500/10'
+                }`;
+                tr.ondblclick = () => {
+                    const configMap = {};
+                    headers.forEach(h => {
+                        const colKey = h.toUpperCase();
+                        const colConfig = rawConfig.find(c => c.ID_Columna === h);
+                        const marca = colConfig ? colConfig.Visible_Encabezado.toUpperCase() : '';
+                        const isPK = colKey === `${tablePrefix}ID`;
+                        const isTechnical = (marca === 'XX') || isPK || colKey.includes('REGISTRO') || colKey.includes('DAT01');
+                        const isSelect = h.endsWith('ID') && !isPK;
+
+                        configMap[h] = {
+                            label: tableConfig.displayMap[h] || h,
+                            editable: !isTechnical,
+                            type: isSelect ? 'select' : 'text'
+                        };
+                    });
+                    localStorage.setItem('TABLE_CONFIG', JSON.stringify(configMap));
+                    localStorage.setItem('TABLE_DATA', JSON.stringify({ ...row, TABLA_ORIGEN: currentTableName }));
+                    window.location.href = 'FormData3.html';
+                };
+                const tdId = document.createElement('td');
+                tdId.className = 'table-data-cell sticky-id-cell text-center';
+                // Si quieres que el número también sea rojo cuando está bloqueado:
+                if (isBlocked) tdId.style.color = '#ef4444'; 
+                tdId.textContent = idx + 1;
+                tr.appendChild(tdId);
+                headers.forEach(h => {
+                    const cleanH = h.toUpperCase();
+                    if (cleanH === `${tablePrefix}ID` || cleanH.endsWith('TYPEREG')) return;
+                    const td = document.createElement('td');
+                    td.className = 'table-data-cell px-3';
+                    td.style.textAlign = tableConfig.alignMap[h] || 'left';                   
+                    // Forzamos el color rojo en el estilo de la celda si está bloqueado
+                    if (isBlocked) {
+                        td.style.color = '#ef4444';
+                    }
+                    const val = typeof getFormattedValue === 'function' ? getFormattedValue(h, row[h]) : row[h];
+                    td.innerHTML = highlightText(val, typeof currentSearchTerm !== 'undefined' ? currentSearchTerm : "");
+                    tr.appendChild(td);
+                });
+                tableBody.appendChild(tr);
+            });
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function updateStatusTag(tableName) {
+            const statusTag = document.getElementById('table-status-tag');
+            if (!statusTag) return;
+            
+            const friendly = getFriendlyName(tableName);
+            const isDefault = (tableName === DEFAULT_TABLE_NAME);
+            
+            statusTag.textContent = friendly; // Ahora muestra "PRINCIPAL" en lugar de "Activa"
+            statusTag.className = isDefault 
+                ? 'text-[10px] px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 border border-gray-500/30 uppercase tracking-tighter'
+                : 'text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase tracking-tighter';
+        }
+
+        function initDataApp() {
+            const tiendaIdDisplay = document.getElementById('header-tienda-id');
+            const tiendaIdValue = localStorage.getItem(KEYS.TIENDA_ID);
+            if (tiendaIdDisplay && tiendaIdValue) tiendaIdDisplay.textContent = tiendaIdValue;
+            fetchData(currentTableName);
+        }
+
+        function setupSearch() {
+            const input = document.getElementById('search-input');
+            const clear = document.getElementById('clear-search-btn');
+            if(!input) return;
+            input.addEventListener('input', (e) => {
+                currentSearchTerm = e.target.value.toLowerCase();
+                applyFiltersAndSort();
+            });
+            if(clear) clear.onclick = () => {
+                input.value = '';
+                currentSearchTerm = "";
+                applyFiltersAndSort();
+            };
+        }
+
+        function highlightText(text, term) {
+            if (!term || term.trim() === "") return text;
+            const stringText = String(text);
+            const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(${escapedTerm})`, 'gi');
+            return stringText.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+
+        function handleSort(key) {
+            if (sortConfig.key === key) {
+                sortConfig.direction = (sortConfig.direction === 'desc') ? 'asc' : 'desc';
+            } else {
+                sortConfig.key = key;
+                sortConfig.direction = 'desc';
+            }
+            applyFiltersAndSort();
+        }
+
+        function updateMetrics(data) {
+            const m = {
+                total: document.querySelector('[data-metric="total"]'),
+                morosos: document.querySelector('[data-metric="Morosos"]'),
+                solventes: document.querySelector('[data-metric="Solventes"]')
+            };
+
+            if (!data || !Array.isArray(data)) return;
+
+            const keys = data.length > 0 ? Object.keys(data[0]) : [];
+            const typeRegField = keys.find(k => k.toUpperCase().endsWith('TYPEREG'));
+            const estadoField = keys.find(k => k.toUpperCase().endsWith('ESTADO')) || 'ESTADO';
+
+            const activeData = data.filter(r => {
+                if (!typeRegField) return true; // Si no existe la columna de control, pasan todos
+                const regStatus = String(r[typeRegField] || '').trim().toUpperCase();
+                return regStatus !== 'BLOQUEADO';
+            });
+
+            if (m.total) m.total.textContent = activeData.length;
+
+            if (m.morosos) {
+                m.morosos.textContent = activeData.filter(r => 
+                    String(r[estadoField] || '').trim().toUpperCase() === 'MOROSO'
+                ).length;
+            }
+
+            if (m.solventes) {
+                m.solventes.textContent = activeData.filter(r => 
+                    String(r[estadoField] || '').trim().toUpperCase() === 'SOLVENTE'
+                ).length;
+            }
+        }
+
+        function applyFiltersAndSort() {
+            let processedData = [...originalData];
+
+            if (currentSearchTerm) {
+                processedData = processedData.filter(row => {
+                    return Object.keys(row).some(key => {
+                        const visibleValue = String(getFormattedValue(key, row[key])).toLowerCase();
+                        return visibleValue.includes(currentSearchTerm);
+                    });
+                });
+            }
+            
+            if (sortConfig.key && sortConfig.direction) {
+                processedData.sort((a, b) => {
+                    let valA = a[sortConfig.key], valB = b[sortConfig.key];
+                    let numA = parseFloat(String(valA).replace(',', '.')), numB = parseFloat(String(valB).replace(',', '.'));
+                    if (!isNaN(numA) && !isNaN(numB)) { valA = numA; valB = numB; }
+                    else { valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase(); }
+                    if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+                    if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+            updateMetrics(processedData); 
+            renderTable(processedData);
+        }
+
+    </script>
+</body>
+</html>

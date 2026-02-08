@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>ZXC - Perfil</title>
+    <script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        html { font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent; }
+        :root { --bg: #1f2937;--txt: #f3f4f6;--surf: #374151;--p-soft: #60a5fa; } /* VARIABLES POR DEFECTO (DARK) */
+        .light-mode { --bg: #f9fafb; --txt: #111827; --surf: #ffffff; } 
+        .light-mode header, .light-mode footer { border-color: #e5e7eb; }
+        html, body { background-color: var(--bg); color: var(--txt); transition: background .3s, color .3s; }   
+        #app-container { width:100%; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; box-shadow:0 0 20px rgba(0,0,0,.2); position:relative; transition:max-width .4s ease-in-out; }
+        #app-container { background-color: var(--bg); }
+        .mode-mobile { max-width:500px; }
+        .mode-desktop { max-width:100%!important; }
+        header,footer { width:100%; max-width:inherit; z-index:500; left:50%; transform:translateX(-50%); position:fixed; background:var(--surf); border-color:#4b5563; }
+        header { background: #374151 !important;color: #f3f4f6 !important;border-color: #4b5563 !important;}
+        header h1 { color: white !important; }       
+        main { flex-grow:1; overflow-y:auto; padding:76px 1rem 72px; }
+        .footer-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:.75rem; color:var(--txt); cursor:pointer; transition:color .2s; }
+        .footer-btn:hover { color:#152c94; }
+        .footer-btn.active { color:var(--p-soft); font-weight:700; }
+        .modal-overlay { position:fixed; inset:0; background:rgba(17,24,39,.8); backdrop-filter:blur(4px); z-index:100; display:flex; justify-content:center; align-items:center; }
+        .modal-content { background:var(--surf); border:1px solid #4b5563; border-radius:1rem; width:90%; max-width:320px; }
+        .light-mode .modal-content { box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .hidden { display:none; }
+        .btn-disabled { opacity: 0.3 !important;cursor: not-allowed !important;pointer-events: none !important;filter: grayscale(1); }
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .hidden { display: none !important; }
+    </style>
+    <style>
+        /* ESTILOS ESPECÍFICOS DE LA SECCIÓN (SPA FormData) */
+        .input-form{margin-top:0.25rem;display:block;width:100%;padding:0.5rem 1rem;background-color:#1f2937;border:1px solid #4b5563;border-radius:0.5rem;color:white;outline:none}
+        .input-form:focus{border-color:#3b82f6}
+        select option { background-color: #1f2937 !important; color: #d1d5db !important; }
+        select {color-scheme: dark; }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%2360a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>');
+            cursor: pointer; filter: none; 
+        }
+    </style>
+</head>
+<body class="dark">
+    <div id="app-container" class="mode-mobile shadow-xl">
+        <header class="top-0 h-14 border-b flex items-center justify-between px-6">
+            <h1 class="text-xl font-bold text-white truncate mr-2">Cargando...</h1>
+            <div class="flex items-center gap-3">
+                <button class="p-2" onclick="toggleView()"><div id="view-icon-container"></div></button>
+                <button class="p-2 text-red-400 rounded-full hover:bg-gray-600" onclick="logout()"><i data-lucide="log-out" class="w-6 h-6"></i></button>
+            </div>
+        </header>
+
+        <main id="main-content" class="relative"> 
+            <div id="global-loader" class="hidden absolute inset-x-0 top-1/4 h-fit z-[400] flex items-center justify-center ...">
+                <div class="flex flex-col items-center p-8 bg-gray-800/95 border border-blue-500/40 rounded-2xl shadow-2xl min-w-[320px] transform -translate-y-10">
+                    <div class="relative mb-4">
+                        <i data-lucide="loader-2" class="w-10 h-10 text-blue-400 animate-spin"></i>
+                    </div>
+                    <span class="text-blue-400 font-bold text-sm tracking-wider uppercase text-center">Cargando Base de Datos</span>
+                    <p class="text-gray-400 text-[10px] mt-2 text-center leading-relaxed">
+                        Sincronizando registros con Google Sheets<br>Por favor, espere.
+                    </p>
+                </div>
+            </div>
+
+            <div id="DetalleDataContent" class="p-6 bg-gray-800 rounded-xl border border-gray-700 shadow-2xl">
+                <div class="flex justify-between items-center border-b border-gray-700 pb-3 mb-4">
+                    <h3 id="viewTitle" class="text-2xl font-bold text-blue-400">Detalle Selección</h3>
+                    <div class="flex gap-4">
+                        <button onclick="duplicateCurrentRecord()" class="text-gray-400 hover:scale-110 transition-transform" title="Duplicar como Nuevo">
+                            <i data-lucide="copy-plus" class="w-6 h-6"></i>
+                        </button>
+                        <i id="header-icon-fixed-view" data-lucide="lock" class="w-6 h-6 text-blue-400 hidden"></i>
+                        <button onclick="showRegisterMode()" class="text-green-400 hover:scale-110 transition-transform border-l-2 border-gray-600 pl-4" title="Nuevo Registro">
+                            <i data-lucide="file-plus-2" class="w-6 h-6"></i>
+                        </button>
+                        <button onclick="showEditMode()" class="text-yellow-400 hover:scale-110 transition-transform" title="Editar Registro">
+                            <i data-lucide="file-pen" class="w-6 h-6"></i>
+                        </button>
+                        <button onclick="closeFormAndReturn()" class="text-blue-400 hover:scale-110 transition-transform" title="Regresar a Datos">
+                            <i data-lucide="circle-arrow-left" class="w-6 h-6"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="perfilBodyContent" class="space-y-1 pb-20"></div>
+            </div>
+
+            <div id="EditDataContent" class="hidden p-6 bg-gray-800 rounded-xl border border-gray-700 shadow-2xl">
+                <div class="flex justify-between items-center border-b border-gray-700 pb-3 mb-4">                      
+                    <h2 id="formTitle" class="text-2xl font-bold text-white">Editar Selección</h2>
+                    <div class="flex items-center gap-4">  
+                        <button id="btn-duplicate-record" 
+                                onclick="duplicateCurrentRecord()" 
+                                class="text-blue-400 hover:scale-110 transition-transform hidden" 
+                                title="Duplicar como Nuevo">
+                            <i data-lucide="copy-plus" class="w-6 h-6"></i>
+                        </button>
+                        <i id="header-icon-fixed-edit" data-lucide="lock" class="w-6 h-6 text-blue-400 hidden"></i>    
+                        <button onclick="showViewMode()" class="text-red-400 hover:scale-110 transition-transform border-l-2 border-gray-600 pl-4"">
+                            <i data-lucide="circle-x" class="w-6 h-6"></i>
+                        </button>
+                    </div>
+                </div>               
+                <form id="editDataForm" class="space-y-1">
+                    <input type="hidden" id="formAction" name="action" value="editDynamicDataTD">                   
+                    <div id="editDataFormFields" class="space-y-1"></div>                   
+                    <button id="submitBtn" type="submit" class="w-full bg-blue-600 mt-6 py-4 rounded-lg font-bold text-white hover:bg-blue-700 transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2">
+                        <span>Guardar Cambios</span>
+                        <i data-lucide="save" class="w-5 h-5"></i>
+                    </button>
+                </form>               
+                <p class="text-sm text-gray-400 text-center pt-4 pb-12">
+                    Los campos que no sean modificados mantendrán su valor original.
+                </p>
+            </div>
+        </main>
+
+        <footer id="app-footer" class="bottom-0 h-18 border-t flex items-center justify-around px-2 py-1">
+            <button class="footer-btn" data-section="Base"><i data-lucide="house-plus" class="w-6 h-6"></i><span>Base</span></button>
+            <button id="btn-datos" class="footer-btn active" data-section="Datos"><i data-lucide="database" class="w-6 h-6"></i><span>Datos</span></button>
+            <button id="btn-agregar" class="footer-btn" data-section="Agregar"><i data-lucide="plus-circle" class="w-6 h-6"></i><span>Agregar</span></button>
+            <button class="footer-btn" data-section="Perfil"><i data-lucide="user" class="w-6 h-6"></i><span>Perfil</span></button>
+            <button class="footer-btn" data-section="Configuracion"><i data-lucide="settings" class="w-6 h-6"></i><span>Config</span></button>
+        </footer>
+    </div>
+
+    <div id="system-modal" class="hidden modal-overlay">
+        <div class="modal-content p-6 text-center">
+            <div id="sys-modal-icon" class="mb-4 flex justify-center"></div>
+            <h3 id="sys-modal-title" class="text-lg font-bold text-white mb-2"></h3>
+            <p id="sys-modal-text" class="text-gray-400 text-sm mb-6"></p>
+            <div id="sys-modal-actions" class="flex gap-3 justify-center"></div>
+        </div>
+    </div>
+
+<script>
+    const KEYS={NOMBRE:'Usuario_Nombre',PERFIL:'Usuario_Perfil',CORREO:'Usuario_Correo',VIEW_MODE:'App_View_Mode',THEME:'App_Theme',TIENDA:'Usuario_Tienda',TIENDA_ID:'Usuario_Tienda_ID',USUARIO_ID:'Usuario_ID'};
+    document.addEventListener('DOMContentLoaded',()=>{if(!localStorage.getItem(KEYS.CORREO))window.location.replace('index.html');initUI();if(window.lucide)lucide.createIcons()});
+    function initUI(){
+        const nom = localStorage.getItem(KEYS.NOMBRE);
+        if(nom) document.querySelector('h1').textContent = `¡Hola, ${nom.trim().split(/\s+/)[0]}!`;
+        applyViewMode(localStorage.getItem(KEYS.VIEW_MODE) || 'mobile');
+        document.querySelectorAll('.footer-btn').forEach(b => b.onclick = () => loadContent(b.getAttribute('data-section')));
+        if(!localStorage.getItem(KEYS.INPUT_ID)){['btn-agregar'].forEach(id => {const el = document.getElementById(id);if(el) el.classList.add('btn-disabled'); });}
+    }
+    function toggleView(){const m=localStorage.getItem(KEYS.VIEW_MODE)==='desktop'?'mobile':'desktop';localStorage.setItem(KEYS.VIEW_MODE,m);applyViewMode(m)}
+    function applyViewMode(m){
+        const c=document.getElementById('app-container'),i=document.getElementById('view-icon-container');
+        if(m==='desktop'){c.classList.replace('mode-mobile','mode-desktop');i.innerHTML='<i data-lucide="smartphone" class="w-5 h-5 text-blue-400"></i>'}
+        else{c.classList.replace('mode-desktop','mode-mobile');i.innerHTML='<i data-lucide="monitor" class="w-5 h-5 text-emerald-400"></i>'}
+        if(window.lucide)lucide.createIcons();
+    }
+    async function loadContent(s){
+        const NAV={'Base':'Base2.html','Inicio':'Inicio.html','Datos': 'Datos2.html','Agregar':'AgregarDat.html','Perfil':'PerfilUser2.html','Configuracion':'ConfigApp2.html'};
+        if(['Agregar'].includes(s) && !localStorage.getItem(KEYS.INPUT_ID)){return showSystemModal({title:'Acceso Imposible', text:'Registre el dato CLAVE para su búsqueda en la sección correspondiente.', type:'warning'});}    
+        if(s==='Configuracion' && localStorage.getItem(KEYS.PERFIL)!=='Admin') return showSystemModal({title:'Acceso Denegado',text:'Solo administradores.',type:'warning'});
+        if(NAV[s]) window.location.href=NAV[s];
+    }     
+    function showSystemModal({title,text,type='info'}){
+        return new Promise(res=>{
+            const m=document.getElementById('system-modal'),ti=document.getElementById('sys-modal-title'),te=document.getElementById('sys-modal-text'),ic=document.getElementById('sys-modal-icon'),ac=document.getElementById('sys-modal-actions');
+            ti.textContent=title;te.textContent=text;const colors={warning:'text-amber-400',info:'text-blue-400'},icons={warning:'alert-triangle',info:'info'};
+            ic.innerHTML=`<i data-lucide="${icons[type]}" class="w-12 h-12 ${colors[type]}"></i>`;ac.innerHTML='';
+            const b=document.createElement('button');b.className='px-6 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold';b.textContent='Aceptar';
+            b.onclick=()=>{m.classList.add('hidden');res(true)};ac.appendChild(b);m.classList.remove('hidden');lucide.createIcons();
+        });
+    }
+    function toggleTheme() {
+        const isLight = document.documentElement.classList.toggle('light-mode');
+        localStorage.setItem(KEYS.THEME, isLight ? 'light' : 'dark');
+        renderTiendaFooter();
+        if(window.lucide) lucide.createIcons();
+    }
+    function applyTheme() {
+        const theme = localStorage.getItem(KEYS.THEME) || 'dark';
+        if (theme === 'light') {document.documentElement.classList.add('light-mode');} 
+        else {document.documentElement.classList.remove('light-mode');}
+    }
+    function toggleGlobalLoader(show) {
+        const loader = document.getElementById('global-loader');
+        if (loader) { loader.classList.toggle('hidden', !show);
+        if (show && window.lucide) lucide.createIcons(); }
+    }
+    function formatNumberWithDots(v) {
+        if (!v && v !== 0) return '';
+        const number = parseFloat(String(v).replace(',', '.'));
+        if (isNaN(number)) return v;
+        const decimals = Math.abs(number - Math.round(number)) < 0.001 ? 0 : 2;
+        return new Intl.NumberFormat('es-ES', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(number);
+    }
+    function formatDate(v) {
+        if (!v) return 'N/A';
+        const dateStr = String(v).trim();
+        if (dateStr.includes('/') && dateStr.split('/').length === 3) {
+            return dateStr; 
+        }
+        if (dateStr.includes('-')) {
+            const parts = dateStr.split('T')[0].split('-'); 
+            if (parts.length === 3) {
+                return `${parts[2].padStart(2,'0')}/${parts[1].padStart(2,'0')}/${parts[0]}`;
+            }
+        }
+        if (v instanceof Date) {
+            return `${v.getDate().toString().padStart(2,'0')}/${(v.getMonth()+1).toString().padStart(2,'0')}/${v.getFullYear()}`;
+        }
+        return dateStr;
+    }
+    function formatDateTime(v) {
+        if (!v) return 'N/A';
+        const d = new Date(v);
+        if (isNaN(d.getTime())) return v;
+        return `${formatDate(v)} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}`;
+    }
+    function getFormattedValue(key, value) {
+        if (value === null || value === undefined || value === '') return '';
+        const cleanKey = String(key).toUpperCase();                 
+        if (cleanKey.includes('REGISTRODATA')) { return formatDateTime(value); }
+        if (cleanKey.includes('FECHA')) { return formatDate(value); }  
+        const isPotentiallyNumber = typeof value === 'number' || 
+            (!isNaN(parseFloat(value)) && isFinite(value) && String(value).length < 15); 
+        if (isPotentiallyNumber && !cleanKey.includes('ID') && !cleanKey.includes('DATA')) {
+            return formatNumberWithDots(value);
+        }
+        return value;
+    }
+    function logout(){localStorage.clear();window.location.href='index.html'}
+
+</script>
+
+<script>
+    function setupNombreCAutoCalculate(tablePrefix) {
+        const n1 = document.getElementById(`input-${tablePrefix}NOMBRE1`);
+        const n2 = document.getElementById(`input-${tablePrefix}NOMBRE2`);
+        const nc = document.getElementById(`input-${tablePrefix}NOMBREC`);
+        if (!n1 || !n2 || !nc) return;
+        const particles = ["de los", "de la", "de", "del", "mc"];
+        const processNombre1 = (text) => {
+            const val = text.trim();
+            if (!val) return "";
+            const parts = val.split(/\s+/);               
+            for (let i = 0; i < parts.length; i++) {
+                for (let p of particles) {
+                    const pParts = p.split(" ");
+                    if (parts.slice(i, i + pParts.length).join(" ").toLowerCase() === p) {
+                        const blockBefore = parts.slice(0, i + pParts.length).join(" ");
+                        if (parts[i + pParts.length]) {
+                            const initial = parts[i + pParts.length].charAt(0).toUpperCase();
+                            return `${blockBefore} ${initial}.`; // Ej: MARIA DE LOS C.
+                        }
+                        return blockBefore;
+                    }
+                }
+            }
+            let res = parts[0];
+            if (parts[1]) res += " " + parts[1].charAt(0).toUpperCase() + ".";
+            return res;
+        };
+        const processNombre2 = (text) => {
+            const val = text.trim();
+            if (!val) return "";
+            if (val.toLowerCase().startsWith("o'")) {
+                const parts = val.split(/\s+/);
+                return parts[1] ? `${parts[0]} ${parts[1].charAt(0).toUpperCase()}.` : parts[0];
+            }
+            const parts = val.split(/\s+/);
+            for (let p of particles) {
+                const pParts = p.split(" ");
+                if (parts.slice(0, pParts.length).join(" ").toLowerCase() === p) {
+                    const mainBlock = parts.slice(0, pParts.length + 1).join(" ");
+                    const remaining = parts.slice(pParts.length + 1);
+                    return remaining.length > 0 ? `${mainBlock} ${remaining[0].charAt(0).toUpperCase()}.` : mainBlock;
+                }
+                for (let i = 1; i < parts.length; i++) {
+                    if (parts.slice(i, i + pParts.length).join(" ").toLowerCase() === p) {
+                        const mainBlock = parts.slice(0, i + pParts.length + 1).join(" ");
+                        const remaining = parts.slice(i + pParts.length + 1);
+                        return remaining.length > 0 ? `${mainBlock} ${remaining[0].charAt(0).toUpperCase()}.` : mainBlock;
+                    }
+                }
+            }
+            return parts[1] ? `${parts[0]} ${parts[1].charAt(0).toUpperCase()}.` : parts[0];
+        };
+        const calculate = () => {
+            const n1Val = processNombre1(n1.value);
+            const n2Val = processNombre2(n2.value);               
+            let final = n1Val;
+            if (n2Val) final += (final ? " " : "") + n2Val;
+            nc.value = final.toUpperCase();
+        };
+        n1.addEventListener('input', calculate);
+        n2.addEventListener('input', calculate);
+    }
+
+    async function loadTableNames() {
+        const tienda = localStorage.getItem(KEYS.TIENDA) || 'DEFAULT';
+        try {
+            const r = await fetch(`${GAS_SCRIPT_URL}?action=getTableFriendlyNames&appTienda=${tienda}`);
+            const res = await r.json();
+            if (res.success) {
+                localStorage.setItem('TABLE_FRIENDLY_NAMES', JSON.stringify(res.data));
+            }
+        } catch (e) { console.error("Error cargando nombres amigables", e); }
+    }
+
+    function getFriendlyTableName(technicalName) {
+        const raw = localStorage.getItem('TABLE_FRIENDLY_NAMES');
+        const friendlyNames = JSON.parse(raw || '{}');
+        return friendlyNames[technicalName]?.label || technicalName;
+    }
+
+    function updateFormTitle(technicalName, isNew = false) {
+        const label = getFriendlyTableName(technicalName);
+        const formTitleEl = document.getElementById('formTitle');
+        if (formTitleEl) {
+            const accion = isNew ? "Nuevo Registro" : "Editar Selección";
+            formTitleEl.textContent = `${accion}: ${label}`;
+        }
+    }    
+
+    function getTablePrimaryKey(headers, tableName) {
+        const prefix = tableName.split('_')[0].toUpperCase();
+        return headers.find(h => h.trim().toUpperCase() === `${prefix}ID`) || headers[0];
+    }
+
+    function hydrateAllSelects(hydrations) {
+        hydrations.forEach(item => {
+            const el = document.getElementById(item.id);
+            if (!el) return;
+            const flat = item.options.flatMap(opt => {
+                try { 
+                    return (typeof opt === 'string' && opt.trim().startsWith('[')) ? JSON.parse(opt) : opt; 
+                } catch { return opt; }
+            });
+            const unique = [...new Set(flat)].filter(Boolean).sort();
+            const hasCurrentValue = item.current && String(item.current).trim() !== "";
+            let optionsHTML = "";
+            if (!item.isDuplicate && !hasCurrentValue) {
+                optionsHTML += `<option value="" selected>-- Seleccionar --</option>`;
+            } else {
+                optionsHTML += `<option value="">-- Seleccionar --</option>`;
+            }
+            optionsHTML += unique.map(val => {
+                const valStr = String(val).trim();
+                const currStr = String(item.current).trim();
+                const isSelected = valStr === currStr;                
+                return `<option value="${val}" ${isSelected ? 'selected' : ''}>${val}</option>`;
+            }).join('');
+            el.innerHTML = optionsHTML;
+            if (hasCurrentValue) {
+                el.value = item.current;
+            }
+        });
+    }     
+    
+console.group("🔍 REVISIÓN DE LOCALSTORAGE");
+console.log("👤 Datos de Usuario (KEYS):");
+Object.entries(KEYS).forEach(([key, storageKey]) => {
+console.log(`   ${key}: ${localStorage.getItem(storageKey)}`);
+});
+
+console.log("📊 Configuración de Tabla (TABLE_CONFIG):");
+console.table(JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}'));
+
+console.log("📝 Datos de la Fila (TABLE_DATA):");
+console.table(JSON.parse(localStorage.getItem('TABLE_DATA') || '{}'));
+console.groupEnd();
+</script>
+
+<script>
+    const GAS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyVcnPmbbR9RXy6ekkvHT6ocTgm0Rsf1wxNQvQpSbEt7ubGVwBhxKqhNm0YeO_dI_XJIg/exec";
+    const STORAGE_CONFIG = 'TABLE_CONFIG';
+    const STORAGE_DATA = 'TABLE_DATA';
+    document.addEventListener('DOMContentLoaded', async () => { 
+        if (!localStorage.getItem(KEYS.CORREO)) {
+            window.location.replace('index.html');
+            return;
+        }       
+        const rawData = localStorage.getItem(STORAGE_DATA);
+        const rawConfig = localStorage.getItem(STORAGE_CONFIG);        
+        if (rawData && rawConfig) {
+            const data = JSON.parse(rawData);
+            const config = JSON.parse(rawConfig);
+            const isNew = data.IS_NEW === true;
+            const tableName = data.TABLA_ORIGEN;           
+            if (!tableName) {
+                window.location.href = 'Datos2.html';
+                return;
+            }           
+            if (window.toggleGlobalLoader) toggleGlobalLoader(true);
+            await fetchMasterData(tableName);
+            if (window.toggleGlobalLoader) toggleGlobalLoader(false);
+            renderProfile();            
+            const friendlyName = getFriendlyTableName(tableName);
+            if (document.getElementById('viewTitle')) {
+                document.getElementById('viewTitle').textContent = `Detalle: ${friendlyName}`;
+            }          
+            const form = document.getElementById('editDataForm');
+            if (isNew) {
+                showRegisterMode(); 
+                if (form) form.onsubmit = handleInsertSubmit;
+            } else {
+                renderFields(config, data, false);
+                if (form) form.onsubmit = handleEditSubmit;
+            }
+        } else {
+            window.location.href = 'Datos2.html';
+        }
+    });
+
+    document.addEventListener('input', (e) => {
+        const target = e.target;
+        if (!target.name) return;
+        const name = target.name.toUpperCase();
+        if (name.includes('MONTO') || name.includes('CANTIDAD') || name.includes('TOTAL') || name.includes('TASA') || name === 'TD101DAT0X') {
+            applyMask(target);
+            target.classList.remove('italic', 'text-gray-500/60');
+        }
+    });
+
+    document.addEventListener('focusin', (e) => {
+        const target = e.target;
+        if (!target.name) return;
+        
+        const name = target.name.toUpperCase();
+        if (name.includes('MONTO') || name.includes('CANTIDAD') || name.includes('TOTAL') || name.includes('TASA') || name === 'TD101DAT0X') {
+            if (target.value.includes('.') && !target.value.includes(',')) {
+                let currentVal = parseFloat(target.value);
+                if (!isNaN(currentVal)) {
+                    target.value = currentVal.toLocaleString('es-ES', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                }
+            } else if (target.value === "") {
+                target.value = "0,00";
+            }
+        }
+    });
+
+    function showViewMode() {
+        const data = JSON.parse(localStorage.getItem('TABLE_DATA') || '{}');
+        if (data.IS_NEW === true) {
+            window.location.href = 'Datos2.html';
+            return;
+        }
+        const detailPanel = document.getElementById('DetalleDataContent');
+        const editPanel = document.getElementById('EditDataContent');           
+        if (detailPanel && editPanel) {
+            detailPanel.classList.remove('hidden');
+            editPanel.classList.add('hidden');
+        }
+    }
+
+    function closeFormAndReturn() {
+        try {
+            const data = JSON.parse(localStorage.getItem(STORAGE_DATA) || '{}');
+            console.log("Tabla origen detectada:", data.TABLA_ORIGEN);
+            const tableToRemember = data.TABLA_ORIGEN;
+            if (tableToRemember) {
+                localStorage.setItem('LAST_VISITED_TABLE', tableToRemember);
+            }
+        } catch (e) {
+            console.error("Error al procesar el cierre:", e);
+        }
+        window.location.href = 'Datos2.html';
+    }
+
+    function toggleRecordStatus(prefix) {
+        const input = document.getElementById('input-typereg');
+        const badge = document.getElementById('badge-status');
+        const icon = document.getElementById('toggle-icon');        
+        if (!input || !badge || !icon) return;
+        const isNowBlocking = input.value !== "Bloqueado";
+        if (isNowBlocking) {
+            input.value = "Bloqueado";
+            badge.textContent = "Bloqueado";
+            badge.className = "text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 uppercase font-bold transition-all";
+            icon.style.color = "#ef4444";
+            icon.setAttribute('data-lucide', 'toggle-right');
+            if (typeof showSystemModal === 'function') {
+                showSystemModal({ title: 'Registro Bloqueado', text: 'Se ha marcado como BLOQUEADO. Los cambios se aplicarán al guardar.', type: 'warning' });
+            }
+        } else {
+            input.value = "Registrado";
+            badge.textContent = "Registrado";
+            badge.className = "text-[10px] px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30 uppercase font-bold transition-all";
+            icon.style.color = "#22c55e";
+            icon.setAttribute('data-lucide', 'toggle-left');
+            if (typeof showSystemModal === 'function') {
+                showSystemModal({ title: 'Registro Restaurado', text: 'El registro se ha marcado como REGISTRADO.', type: 'info' });
+            }
+        }           
+        if(window.lucide) lucide.createIcons();
+    }
+
+    function toggleGastosType() {
+        const input = document.getElementById('input-TD202DAT01');
+        const badge = document.getElementById('badge-gasto-type');
+        const iconToggle = document.getElementById('icon-gasto-type');
+        const iconHeaderEdit = document.getElementById('header-icon-fixed-edit');        
+        if (!input || !badge || !iconToggle) return;
+        const isNowFijo = input.value !== "Fijo";
+        if (isNowFijo) {
+            input.value = "Fijo";
+            badge.innerHTML = `<i data-lucide="lock" class="w-3.5 h-3.5"></i>`;
+            badge.className = "flex items-center justify-center p-1 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 transition-all";
+            iconToggle.style.color = "#3b82f6";
+            iconToggle.setAttribute('data-lucide', 'toggle-right');
+            if (iconHeaderEdit) iconHeaderEdit.classList.remove('hidden');
+        } else {
+            input.value = "Eventual";
+            badge.innerHTML = `<i data-lucide="calendar-clock" class="w-3.5 h-3.5"></i>`;
+            badge.className = "flex items-center justify-center p-1 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 transition-all";
+            iconToggle.style.color = "#a855f7";
+            iconToggle.setAttribute('data-lucide', 'toggle-left');
+            if (iconHeaderEdit) iconHeaderEdit.classList.add('hidden');
+        }
+        if(window.lucide) lucide.createIcons();
+    }
+
+    function applyMask(input) {
+        let value = input.value.replace(/\D/g, '');
+        let numericValue = parseFloat(value) / 100;
+        if (isNaN(numericValue)) { input.value = "0,00"; return; }
+        input.value = numericValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function sanitizePayload(formData) {
+        const entries = Object.fromEntries(formData.entries());
+        
+        for (let key in entries) {
+            const k = key.toUpperCase();
+            let val = String(entries[key]).trim();
+            if (k.includes('FECHA')) {
+                if (val.includes('-')) { // Formato yyyy-mm-dd
+                    const parts = val.split('-');
+                    if (parts.length === 3) {
+                        entries[key] = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    }
+                }
+                continue; // Saltamos a la siguiente iteración
+            }
+            if (k.includes('MONTO') || k.includes('CANTIDAD') || k.includes('TOTAL') || k === 'TD101DAT01') {
+                if (val === "" || val === "0,00") {
+                    entries[key] = 0;
+                    continue;
+                }
+                if (val.includes(',')) {
+                    val = val.replace(/\./g, '').replace(',', '.');
+                } else {
+                    val = val.replace(/\s/g, '');
+                }              
+                const numericVal = parseFloat(val);
+                entries[key] = isNaN(numericVal) ? 0 : numericVal;
+            }
+        }       
+        return entries;
+    }
+
+    function renderFields(config, data, isNew = false) {
+        const container = document.getElementById('editDataFormFields');
+        const prefix = (data.TABLA_ORIGEN || "").split('_')[0].toUpperCase();
+        const tv001 = JSON.parse(localStorage.getItem('FULL_DATA_TV001') || '[]');
+        const selectHydrations = [];
+        const excludedIDTables = ['TD101', 'TD102', 'TD201'];
+        const duplicateBtn = document.getElementById('btn-duplicate-record');
+        if (duplicateBtn) {
+            duplicateBtn.classList.add('hidden');
+            duplicateBtn.style.display = 'none';
+        }
+        const rawStatus = data[`${prefix}TYPEREG`] || "Registrado";
+        const isActuallyBlocked = rawStatus === "Bloqueado";
+        const statusControlHtml = `
+            <div class="flex items-center gap-3">
+                <span id="badge-status" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold ${isActuallyBlocked ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}">
+                    ${rawStatus}
+                </span>
+                <input type="hidden" name="${prefix}TYPEREG" id="input-typereg" value="${rawStatus}">
+                <button type="button" onclick="toggleRecordStatus('${prefix}')" class="focus:outline-none flex items-center">
+                    <i id="toggle-icon" data-lucide="${isActuallyBlocked ? 'toggle-left' : 'toggle-right'}" class="w-8 h-8" style="color: ${isActuallyBlocked ? '#ef4444' : '#22c55e'}"></i>
+                </button>
+            </div>`;
+
+        container.innerHTML = Object.keys(config).map(colId => {
+            const field = config[colId];
+            const cleanId = colId.toUpperCase().trim();
+            let value = (data && data[colId] !== undefined) ? data[colId] : '';          
+            const isTableID = cleanId === `${prefix}ID`;
+            const isIdNombre = cleanId === `${prefix}IDNOMBRE`;
+            const isNombreC = cleanId === `${prefix}NOMBREC`;
+            const isExcluded = excludedIDTables.includes(prefix);
+            const isDateOnly = cleanId.includes('FECHA');
+            const isRegistryData = cleanId.includes('REGISTRODATA');
+            const isRegistryInfo = cleanId.includes('REGISTRO');
+            const canEdit = isNew ? (!isNombreC && !isRegistryInfo && field.editable !== false) : (field.editable !== false && !isNombreC);
+            if (isTableID) {
+                if (isExcluded) return isNew ? '' : `<input type="hidden" name="${colId}" id="input-${cleanId}" value="${value}">`;
+                return `
+                    <div class="border-b border-gray-700/40 py-1">
+                        <span class="text-[10px] font-bold text-orange-400 uppercase block -mb-1">${field.label || 'ID Registro'}</span>
+                        <div class="flex items-center justify-between min-h-[32px]">
+                            <input type="text" name="${colId}" id="input-${cleanId}" value="${value}" readonly 
+                                class="bg-transparent outline-none border-none focus:ring-0 text-[22px] text-blue-300 font-bold p-0 m-0 w-full cursor-default">
+                            ${statusControlHtml}
+                        </div>
+                    </div>`;
+            }
+            if (isIdNombre) {
+                return `
+                    <div class="border-b border-gray-700/40 py-1">
+                        <span class="text-[10px] font-bold text-blue-400 uppercase block -mb-1">${field.label}</span>
+                        <div class="flex items-center justify-between min-h-[32px] gap-2">
+                            <input type="text" name="${colId}" id="input-${cleanId}" value="${value}" 
+                                class="bg-transparent outline-none border-none focus:ring-0 text-[22px] text-blue-300 font-bold p-0 m-0 w-full transition-all">
+                            ${isExcluded ? statusControlHtml : ''}
+                        </div>
+                    </div>`;
+            }
+            const masterMatch = tv001.filter(row => row.Encabezado_Tabla?.toUpperCase().trim() === cleanId);
+            if (masterMatch.length > 0 && canEdit) {
+                const selectId = `select-${cleanId}`;
+                selectHydrations.push({ id: selectId, options: masterMatch.map(m => m.Valores_Encabezado), current: value, isDuplicate: (isNew && value !== "") });
+                return `
+                    <div class="border-b border-gray-700/40 py-1">
+                        <span class="text-[10px] font-bold text-blue-400 uppercase block -mb-1">${field.label}</span>
+                        <div class="flex items-center h-[32px]">
+                            <select name="${colId}" id="${selectId}" class="w-full bg-transparent text-blue-300 outline-none text-[18px] font-bold p-0 appearance-none cursor-pointer scheme-dark">
+                                <option value="${value}">${value || '-- Seleccionar --'}</option>
+                            </select>
+                        </div>
+                    </div>`;
+            }
+            let inputType = isDateOnly ? "date" : "text"; 
+            let displayValue = value;
+            if (value && isDateOnly) {
+                const valStr = String(value).trim();
+                if (valStr.includes('/')) {
+                    const p = valStr.split('/');
+                    if (p.length === 3) displayValue = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+                } else if (valStr.includes('-')) {
+                    displayValue = valStr.split('T')[0];
+                }
+            } else if (value && isRegistryData) {
+                displayValue = (typeof getFormattedValue === 'function') ? getFormattedValue(colId, value) : value;
+            }
+            const dynamicClass = isNombreC ? "text-blue-200 font-bold bg-blue-900/10" : "text-gray-200 font-medium";
+            return `
+                <div class="border-b border-gray-700/40 py-1">
+                    <span class="text-[10px] font-bold text-blue-400 uppercase block -mb-1">${field.label}</span>
+                    <div class="flex items-center h-[32px]">
+                        <input type="${inputType}" name="${colId}" id="input-${cleanId}" value="${displayValue}" ${(!canEdit) ? 'readonly' : ''} 
+                            class="w-full bg-transparent outline-none p-0 leading-tight focus:ring-0 ${dynamicClass} ${!canEdit ? 'opacity-70' : ''} scheme-dark">
+                    </div>
+                </div>`;
+        }).join('');
+        if (window.lucide) lucide.createIcons();
+        if (typeof hydrateAllSelects === 'function') hydrateAllSelects(selectHydrations);
+    }
+
+    function renderProfile() {
+        const config = JSON.parse(localStorage.getItem(STORAGE_CONFIG) || '{}');
+        const data = JSON.parse(localStorage.getItem(STORAGE_DATA) || '{}');
+        const container = document.getElementById('perfilBodyContent');
+        if (!container) return;
+       
+        const prefix = (data.TABLA_ORIGEN || "").split('_')[0].toUpperCase();
+        const excludedIDTables = ['TD101', 'TD102', 'TD201'];
+        const duplicateBtn = document.getElementById('btn-duplicate-record');
+        if (duplicateBtn) {
+            duplicateBtn.classList.remove('hidden');
+            duplicateBtn.style.display = 'block';
+        }
+
+        const rawStatus = data[`${prefix}TYPEREG`] || "Registrado";
+        const isBlocked = rawStatus.toUpperCase() === 'BLOQUEADO';
+        const badgeHtml = `<span class="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 uppercase font-bold">Bloqueado</span>`;
+
+        container.innerHTML = Object.keys(config).map(colId => {
+            const cleanId = colId.toUpperCase().trim();
+            const isTableID = cleanId === `${prefix}ID`;
+            const isIdNombre = cleanId === `${prefix}IDNOMBRE`;
+            const isExcluded = excludedIDTables.includes(prefix);
+
+            if (cleanId.endsWith('TYPEREG') || cleanId.includes('REGISTRO')) return '';
+            if (isTableID && isExcluded) return '';
+
+            const formattedValue = typeof getFormattedValue === 'function' ? getFormattedValue(colId, data[colId]) : data[colId];
+            let shouldShowBadge = isBlocked && ((isTableID && !isExcluded) || (isIdNombre && isExcluded));
+            const isHighPriority = cleanId.includes('NOMBREC') || cleanId.includes('DAT01') || isIdNombre || isTableID;
+
+            return `
+                <div class="border-b border-gray-700/40 py-1"> 
+                    <span class="text-[10px] font-bold ${isTableID ? 'text-orange-400/80' : 'text-blue-400/60'} uppercase block -mb-0.5">${config[colId].label}</span>
+                    <div class="flex items-center h-[32px]">
+                        <span class="${isHighPriority ? 'text-[22px] text-blue-300 font-bold' : 'text-[18px] text-gray-200'} leading-tight">
+                            ${formattedValue || '---'}
+                        </span>
+                        ${shouldShowBadge ? badgeHtml : ''}
+                    </div>
+                </div>`;
+        }).join('');
+        
+        if (window.lucide) lucide.createIcons();
+    }
+
+    async function executeSubmit(payload, customTitle = '¡Éxito!') {
+        // 1. Desplazar la pantalla al inicio para asegurar visibilidad del loader
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const loader = document.getElementById('global-loader');
+        if (loader) {
+            loader.querySelector('span').textContent = payload.action.includes('insert') || payload.action.includes('register') ? "Creando Registro" : "Actualizando Datos";
+            loader.classList.remove('hidden');
+        }
+        try {
+            const r = await fetch(GAS_SCRIPT_URL, { method: 'POST', body: new URLSearchParams(payload) });
+            const res = await r.json();           
+            if (res.success) {
+                if (res.data) {
+                    const currentData = JSON.parse(localStorage.getItem(STORAGE_DATA) || '{}');                   
+                    const dataFromServer = { ...res.data };
+                    Object.keys(dataFromServer).forEach(key => {
+                        if (key.toUpperCase().includes('FECHA') && dataFromServer[key]) {
+                            dataFromServer[key] = String(dataFromServer[key]).split('T')[0];
+                        }
+                    });
+                    localStorage.setItem(STORAGE_DATA, JSON.stringify({
+                        ...currentData, 
+                        ...dataFromServer, 
+                        IS_NEW: false
+                    }));
+                }               
+                if (loader) loader.classList.add('hidden');
+                await showSystemModal({ title: customTitle, text: res.message, type: 'info' });
+                location.reload();
+            } else {
+                if (loader) loader.classList.add('hidden');
+                await showSystemModal({ title: 'Error', text: res.message, type: 'warning' });
+            }
+        } catch (err) {
+            if (loader) loader.classList.add('hidden');
+            console.error("Error de red:", err);
+            showSystemModal({ title: 'Error', text: 'Error de conexión con el servidor', type: 'warning' });
+        }
+    }
+    
+    async function handleEditSubmit(e) {
+        e.preventDefault();
+        const currentData = JSON.parse(localStorage.getItem(STORAGE_DATA) || '{}');
+        const prefix = currentData.TABLA_ORIGEN.split('_')[0].toUpperCase();
+        const payload = {
+            action: "editDynamicDataTD",
+            TABLA_DESTINO: currentData.TABLA_ORIGEN,
+            CAMPO_CLAVE: `${prefix}ID`,
+            ...sanitizePayload(new FormData(e.target)),
+            [`${prefix}TYPEREG`]: document.getElementById('input-typereg')?.value || currentData[`${prefix}TYPEREG`],
+            [`${prefix}RegistroUser`]: localStorage.getItem(KEYS.USUARIO_ID) || "User"
+        };
+        await executeSubmit(payload, 'Registro Actualizado');
+    }
+
+    async function handleInsertSubmit(e) {
+        e.preventDefault();
+        const config = JSON.parse(localStorage.getItem(STORAGE_CONFIG) || '{}');
+        const prefix = Object.keys(config)[0].split('ID')[0].toUpperCase();
+        const payload = {
+            action: document.getElementById('formAction').value || "registerDynamicDataTD",
+            TABLA_DESTINO: localStorage.getItem('LAST_TABLE_VIEWED') || JSON.parse(localStorage.getItem(STORAGE_DATA)).TABLA_ORIGEN,
+            ...sanitizePayload(new FormData(e.target)),
+            [`${prefix}TYPEREG`]: "Registrado",
+            [`${prefix}RegistroUser`]: localStorage.getItem(KEYS.USUARIO_ID) || "User"
+        };
+        await executeSubmit(payload, 'Nuevo Registro Creado');
+    }
+
+    function duplicateCurrentRecord() {
+        showEditMode();
+        const data = JSON.parse(localStorage.getItem(STORAGE_DATA) || '{}');
+        const prefix = (data.TABLA_ORIGEN || "").split('_')[0].toUpperCase();
+
+        document.getElementById('formAction').value = "registerDynamicDataTD";
+        document.getElementById('editDataForm').onsubmit = handleInsertSubmit; 
+        document.getElementById('formTitle').textContent = "Nuevo Registro (duplicado)";
+        document.getElementById('submitBtn').innerHTML = `<span>Confirmar y Crear Copia</span><i data-lucide="plus-circle" class="w-5 h-5"></i>`;
+
+        const idInput = document.querySelector(`input[name="${prefix}ID"]`);
+        if (idInput) idInput.value = "*******"; 
+        const allInputs = document.querySelectorAll('#editDataForm input');
+        allInputs.forEach(input => {
+            const name = input.name.toUpperCase();
+            const isKeyField = name === `${prefix}IDNOMBRE` || name === `${prefix}FECHA` ||  name.includes('MONTO') || name.includes('CANTIDAD') || name.includes('TOTAL') || name.includes('TASA') || name === 'TD101DAT01';
+            if (isKeyField) {
+                if (input.value && input.value !== "0,00") {input.placeholder = input.value;
+                }
+                input.value = ""; 
+                input.classList.add('italic', 'text-gray-500/60');
+            }
+        });
+
+        if (window.lucide) lucide.createIcons();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showRegisterMode() {
+        const duplicateBtn = document.getElementById('btn-duplicate-record');
+        const config = JSON.parse(localStorage.getItem(STORAGE_CONFIG));
+        const data = JSON.parse(localStorage.getItem(STORAGE_DATA)); 
+        const tableName = data.TABLA_ORIGEN;
+        if (duplicateBtn) {duplicateBtn.classList.add('hidden');duplicateBtn.style.display = 'none';}  
+
+        document.getElementById('formTitle').textContent = `Nuevo Registro: ${getFriendlyTableName(tableName)}`;
+        document.getElementById('formAction').value = "registerDynamicDataTD";
+        document.getElementById('submitBtn').textContent = "Crear Nuevo Registro";
+        renderFields(config, { TABLA_ORIGEN: tableName }, true);
+        togglePanels('edit');
+    }
+
+    function showEditMode() {
+        const config = JSON.parse(localStorage.getItem(STORAGE_CONFIG));
+        const data = JSON.parse(localStorage.getItem(STORAGE_DATA));
+        document.getElementById('formTitle').textContent = `Editar Selección: ${getFriendlyTableName(data.TABLA_ORIGEN)}`;
+        document.getElementById('formAction').value = "editDynamicDataTD";
+        document.getElementById('submitBtn').textContent = "Guardar Cambios";           
+        renderFields(config, data, false);
+        togglePanels('edit');
+    }
+
+    function togglePanels(mode) {
+        const detailPanel = document.getElementById('DetalleDataContent');
+        const editPanel = document.getElementById('EditDataContent');            
+        if (mode === 'edit') {detailPanel.classList.add('hidden'); editPanel.classList.remove('hidden');
+        } else {editPanel.classList.add('hidden'); detailPanel.classList.remove('hidden');
+        }
+    }
+
+    async function fetchMasterData(currentTable) {
+        const userTienda = localStorage.getItem(KEYS.TIENDA) || 'DEFAULT';
+        const now = Date.now();
+        const cacheDuration = 5 * 60 * 1000;
+        const tablesToFetch = [{ name: "TV001_VALORES", key: "FULL_DATA_TV001", time: "TV001_TIMESTAMP" }];
+        if (currentTable && currentTable !== "TV001_VALORES") {
+            const p = currentTable.split('_')[0];
+            tablesToFetch.push({ name: currentTable, key: `FULL_DATA_${p}`, time: `${p}_TIMESTAMP` });
+        }
+        for (const t of tablesToFetch) {
+            const lastFetch = localStorage.getItem(t.time);
+            if (!localStorage.getItem(t.key) || (now - lastFetch > cacheDuration)) {
+                try {
+                    const r = await fetch(`${GAS_SCRIPT_URL}?action=getTableData&tableName=${t.name}&userTienda=${userTienda}&ignoreVisibility=true`);
+                    const res = await r.json();
+                    if (res.success) {
+                        localStorage.setItem(t.key, JSON.stringify(res.data));
+                        localStorage.setItem(t.time, now.toString());
+                    }
+                } catch (e) { console.error("Error maestro:", t.name, e); }
+            }
+        }
+    }
+</script>
+</body>
+</html>
