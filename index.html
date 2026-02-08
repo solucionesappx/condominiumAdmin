@@ -48,7 +48,11 @@
                 <div class="toggle-button"></div>
             </div>
         </div>
-        <h1 class="text-3xl font-bold mb-6 text-center" style="color: var(--text-color);">Inicia Sesión</h1>      
+        <h1 class="text-3xl font-bold mb-0 text-center" style="color: var(--text-color);">Iniciar Sesión</h1> 
+        <div class="text-center mb-6">
+            <span id="nombre-tienda" class="font-semibold text-xs text-gray-500"></span>
+        </div>    
+
         <form id="loginForm" class="w-full" autocomplete="off">
             <div class="mb-4">
                 <label for="userCredentialLogin" class="block text-sm font-semibold mb-2" style="color: var(--text-color);">Usuario o Correo</label>
@@ -217,6 +221,7 @@
     <script>
         const GAS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz29nU5Ra_k_RZ9BpXUp5D6YAQx3cScf_WDVHjPcJo-gOYtUQ-leW7GU6qSOM85Mbq_/exec'; // URL de tu script en Google Apps
         const appTienda = 'CondominiumAdmin';
+        const appNombre = 'Condominio App';
         const themeToggle = document.getElementById('theme-toggle');
         const body = document.body;
         const forgotPasswordLink = document.getElementById('forgot-password-link');
@@ -271,6 +276,18 @@
             }
         });
 
+document.addEventListener('DOMContentLoaded', () => {
+    const tiendaSpan = document.getElementById('nombre-tienda');
+    
+    if (tiendaSpan) {
+        // Si appNombre no está definida o es vacía, usará appTienda
+        // Si appTienda tampoco existe, puedes poner un texto por defecto al final
+        tiendaSpan.textContent = (typeof appNombre !== 'undefined' && appNombre) 
+                                 ? appNombre 
+                                 : (typeof appTienda !== 'undefined' ? appTienda : "Por asignar");
+    }
+});
+
         // Lógica para generar el ID único (Usuario_Idx)
         function generateShortUUID() {
             const chars = 'ABCDEFGHIJKLMNPQRSTUVWXYZ234562589';
@@ -319,7 +336,7 @@
                 modal.classList.remove('is-visible');
             }
         }
-        
+       
         // Manejo del formulario principal de login
         if (loginForm) {
             loginForm.addEventListener('submit', async (e) => {
