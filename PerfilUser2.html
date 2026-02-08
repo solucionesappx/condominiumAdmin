@@ -150,6 +150,7 @@ Object.entries(PROFILE_KEYS).forEach(([key, storageKey]) => {
             const flds = [
                 { id: 'Nombre', l: 'Nombre Usuario', v: localStorage.getItem(PROFILE_KEYS.NOMBRE), i: true },
                 { id: 'Usuario_ID', l: 'ID Usuario', v: localStorage.getItem(PROFILE_KEYS.USUARIO_ID), i: true },
+                { id: 'Tienda', l: 'Tienda', v: localStorage.getItem(PROFILE_KEYS.TIENDA), i: true },
                 { id: 'Perfil', l: 'Perfil', v: localStorage.getItem(PROFILE_KEYS.PERFIL), i: true },
                 { id: 'Correo', l: 'Correo registrado', v: localStorage.getItem(PROFILE_KEYS.CORREO) },
                 { id: 'Telefono', l: 'Teléfono registrado', v: localStorage.getItem(PROFILE_KEYS.TELEFONO) },
@@ -184,7 +185,8 @@ Object.entries(PROFILE_KEYS).forEach(([key, storageKey]) => {
             const editForm = document.getElementById('editProfileFormFields');
             const fields = [
                 { id: 'Nombre', l: 'Nombre Usuario', v: localStorage.getItem(PROFILE_KEYS.NOMBRE), edit: false, i: true },
-                { id: 'Usuario_ID', l: 'ID Usuario', v: localStorage.getItem(PROFILE_KEYS.USUARIO_ID), edit: false, i: true },                
+                { id: 'Usuario_ID', l: 'ID Usuario', v: localStorage.getItem(PROFILE_KEYS.USUARIO_ID), edit: false, i: true }, 
+                { id: 'Tienda', l: 'Tienda', v: localStorage.getItem(PROFILE_KEYS.TIENDA), edit: false, i: true },               
                 { id: 'Perfil', l: 'Perfil', v: localStorage.getItem(PROFILE_KEYS.PERFIL), edit: false, i: true },
                 { id: 'Usuario_Correo', l: 'Correo registrado', v: localStorage.getItem(PROFILE_KEYS.CORREO), edit: true, type: 'email' },
                 { id: 'Usuario_Telefono', l: 'Teléfono registrado', v: localStorage.getItem(PROFILE_KEYS.TELEFONO), edit: true, type: 'text' },
