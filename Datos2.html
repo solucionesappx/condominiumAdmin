@@ -297,39 +297,42 @@ console.groupEnd();
             if(btnReload) btnReload.onclick = () => fetchData(currentTableName);
         });
     
-        function showRegisterMode() {
-            const tableKey = String(currentTableName).trim().toUpperCase();
-            const tablePrefix = tableKey.split('_')[0];
-            const configMap = {};
-            const rawHeaders = tableConfig.columnOrder || (originalData.length > 0 ? Object.keys(originalData[0]) : []);
-            
-            rawHeaders.forEach(h => {
-                const colKey = String(h).trim().toUpperCase();
-                const colConfig = rawConfig.find(c => 
-                    String(c.ID_Columna || '').trim().toUpperCase() === colKey && 
-                    String(c.Tabla || '').trim().toUpperCase() === tableKey
-                );                
-                const marca = colConfig ? String(colConfig.Visible_Encabezado || '').trim().toUpperCase() : '';
-                const cleanH = colKey.replace(/_/g, '');
-                if (marca === 'NO') return; // Exclusión total del formulario
-                const isBlocked = (marca === 'XX') || 
-                                cleanH.includes('REGISTRO') || 
-                                cleanH === `${tablePrefix}DAT01` || 
-                                cleanH === `${tablePrefix}NOMBREC` //||
-                                //cleanH === `${tablePrefix}ID`;
-                configMap[h] = {
-                    label: tableConfig.displayMap[h] || h,
-                    editable: !isBlocked
-                };
-            });
+function showRegisterMode() {
+    const tableKey = String(currentTableName).trim().toUpperCase();
+    const tablePrefix = tableKey.split('_')[0];
+    const configMap = {};
+    const rawHeaders = tableConfig.columnOrder || (originalData.length > 0 ? Object.keys(originalData[0]) : []);
+    
+    rawHeaders.forEach(h => {
+        const colKey = String(h).trim().toUpperCase();
+        
+        // Buscamos usando las claves exactas del backend: ID_Columna
+        const colConfig = rawConfig.find(c => 
+            String(c.ID_Columna || '').trim().toUpperCase() === colKey
+        );                
+        
+        // Buscamos usando la clave exacta del backend: Visible_Encabezado
+        const marca = colConfig ? String(colConfig.Visible_Encabezado || '').trim().toUpperCase() : '';
+        const cleanH = colKey.replace(/_/g, '');
 
-            localStorage.setItem('TABLE_CONFIG', JSON.stringify(configMap));
-            localStorage.setItem('TABLE_DATA', JSON.stringify({ 
-                TABLA_ORIGEN: currentTableName, 
-                IS_NEW: true 
-            }));           
-            window.location.href = 'FormData3.html';
-        }
+const isXX = marca.includes('XX'); 
+
+const isBlocked = isXX || 
+                  colKey === `${tablePrefix}ID` || 
+                  cleanH.includes('REGISTRO') || 
+                  cleanH.includes('DAT01') || 
+                  cleanH.includes('NOMBREC');
+
+        configMap[h] = {
+            label: tableConfig.displayMap[h] || h,
+            editable: !isBlocked 
+        };
+    });
+
+    localStorage.setItem('TABLE_CONFIG', JSON.stringify(configMap));
+    localStorage.setItem('TABLE_DATA', JSON.stringify({ TABLA_ORIGEN: currentTableName, IS_NEW: true }));           
+    window.location.href = 'FormData3.html';
+}
 
         function updateTableSelector(tables) {
             const selector = document.getElementById('table-selector');
@@ -363,7 +366,7 @@ console.groupEnd();
                     currentTableName = tableName;
                     localStorage.setItem('LAST_VISITED_TABLE', tableName); 
                     originalData = res.data || [];
-                    rawConfig = res.config || []; 
+                    rawConfig = res.fullConfig || res.config || [];
                     currentSearchTerm = "";
                     const searchInput = document.getElementById('search-input');
                     if (searchInput) searchInput.value = "";
@@ -397,104 +400,133 @@ console.groupEnd();
             }
         }
 
-        function renderTable(data) {
-            const container = document.getElementById('data-table-container');
-            if (!container) return;
-            container.innerHTML = `
-                <table id="main-table">
-                    <thead><tr id="table-header"></tr></thead>
-                    <tbody id="table-body"></tbody>
-                </table>
-            `;
-            const tableHeader = document.getElementById('table-header');
-            const tableBody = document.getElementById('table-body');
-            const tableKey = String(currentTableName).trim().toUpperCase();
-            const tablePrefix = tableKey.split('_')[0];
-            const headers = tableConfig.columnOrder; 
-            const thId = document.createElement('th');
-            thId.className = 'sticky-id-cell';
-            thId.innerHTML = `<div class="header-content" style="justify-content: center;"><span>#</span></div>`;
-            tableHeader.appendChild(thId);
-            // Dibujar encabezados (EXCEPTO TYPEREG y el ID técnico)
-            headers.forEach(h => {
-                const cleanH = h.toUpperCase();
-                // ESTÉTICA: No creamos encabezado para TYPEREG ni para el ID
-                if (cleanH === `${tablePrefix}ID` || cleanH.endsWith('TYPEREG')) return;
-                const th = document.createElement('th');
-                const friendlyName = tableConfig.displayMap[h] || h;
-                let iconName = sortConfig.key === h ? (sortConfig.direction === 'desc' ? 'chevron-down' : 'chevron-up') : 'chevrons-up-down';               
-                th.innerHTML = `
-                    <div class="header-content" style="justify-content: center;">
-                        <span>${friendlyName}</span>
-                        <i data-lucide="${iconName}" class="w-4 h-4 opacity-30"></i>
-                    </div>`;
-                th.onclick = () => handleSort(h);
-                tableHeader.appendChild(th);
-            });
+function renderTable(data) {
+    const container = document.getElementById('data-table-container');
+    if (!container) return;            
+    
+    container.innerHTML = `
+        <table id="main-table">
+            <thead><tr id="table-header"></tr></thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    `; 
+            
+    const tableHeader = document.getElementById('table-header');
+    const tableBody = document.getElementById('table-body');
+    const tableKey = String(currentTableName).trim().toUpperCase();
+    const tablePrefix = tableKey.split('_')[0];
+    const headers = tableConfig.columnOrder; 
+    
+    const excludedIDTables = ['TD101', 'TD102', 'TD201'];
+    const shouldHideID = excludedIDTables.includes(tablePrefix);
 
-            data.forEach((row, idx) => {
-                const tr = document.createElement('tr');
-                const typeRegKey = Object.keys(row).find(k => k.toUpperCase().endsWith('TYPEREG'));
-                const isBlocked = typeRegKey && String(row[typeRegKey]).toUpperCase() === 'BLOQUEADO';
-                // Aplicamos clases de Tailwind: si está bloqueado, texto rojo
-                tr.className = `cursor-pointer transition-colors group ${
-                    isBlocked 
-                    ? 'opacity-80 bg-red-500/5 text-red-500 hover:bg-red-500/10 hover:opacity-100' 
-                    : 'hover:bg-blue-500/10'
-                }`;
-                tr.ondblclick = () => {
-                    const configMap = {};
-                    headers.forEach(h => {
-                        const colKey = h.toUpperCase();
-                        const colConfig = rawConfig.find(c => c.ID_Columna === h);
-                        const marca = colConfig ? colConfig.Visible_Encabezado.toUpperCase() : '';
-                        const isPK = colKey === `${tablePrefix}ID`;
-                        const isTechnical = (marca === 'XX') || isPK || colKey.includes('REGISTRO') || colKey.includes('DAT01');
-                        const isSelect = h.endsWith('ID') && !isPK;
+    // Celda de numeración (#)
+    const thId = document.createElement('th');
+    thId.className = 'sticky-id-cell';
+    thId.innerHTML = `<div class="header-content" style="justify-content: center;"><span>#</span></div>`;
+    tableHeader.appendChild(thId);
 
-                        configMap[h] = {
-                            label: tableConfig.displayMap[h] || h,
-                            editable: !isTechnical,
-                            type: isSelect ? 'select' : 'text'
-                        };
-                    });
-                    localStorage.setItem('TABLE_CONFIG', JSON.stringify(configMap));
-                    localStorage.setItem('TABLE_DATA', JSON.stringify({ ...row, TABLA_ORIGEN: currentTableName }));
-                    window.location.href = 'FormData3.html';
-                };
-                const tdId = document.createElement('td');
-                tdId.className = 'table-data-cell sticky-id-cell text-center';
-                // Si quieres que el número también sea rojo cuando está bloqueado:
-                if (isBlocked) tdId.style.color = '#ef4444'; 
-                tdId.textContent = idx + 1;
-                tr.appendChild(tdId);
-                headers.forEach(h => {
-                    const cleanH = h.toUpperCase();
-                    if (cleanH === `${tablePrefix}ID` || cleanH.endsWith('TYPEREG')) return;
-                    const td = document.createElement('td');
-                    td.className = 'table-data-cell px-3';
-                    td.style.textAlign = tableConfig.alignMap[h] || 'left';                   
-                    // Forzamos el color rojo en el estilo de la celda si está bloqueado
-                    if (isBlocked) {
-                        td.style.color = '#ef4444';
-                    }
-                    const val = typeof getFormattedValue === 'function' ? getFormattedValue(h, row[h]) : row[h];
-                    td.innerHTML = highlightText(val, typeof currentSearchTerm !== 'undefined' ? currentSearchTerm : "");
-                    tr.appendChild(td);
-                });
-                tableBody.appendChild(tr);
-            });
-            if (window.lucide) lucide.createIcons();
-        }
+    // Dibujar encabezados (TH)
+    headers.forEach(h => {
+        const cleanH = h.toUpperCase();
+        if (cleanH.endsWith('TYPEREG')) return;
+        if (cleanH === `${tablePrefix}ID` && shouldHideID) return;
+
+        const th = document.createElement('th');
+        const friendlyName = tableConfig.displayMap[h] || h;
+        let iconName = sortConfig.key === h ? (sortConfig.direction === 'desc' ? 'chevron-down' : 'chevron-up') : 'chevrons-up-down';               
+        
+        th.innerHTML = `
+            <div class="header-content" style="justify-content: center;">
+                <span>${friendlyName}</span>
+                <i data-lucide="${iconName}" class="w-4 h-4 opacity-30"></i>
+            </div>`;
+        th.onclick = () => handleSort(h);
+        tableHeader.appendChild(th);
+    });
+
+    // Dibujar filas (TR)
+    data.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        const typeRegKey = Object.keys(row).find(k => k.toUpperCase().endsWith('TYPEREG'));
+        const isBlockedRow = typeRegKey && String(row[typeRegKey]).toUpperCase() === 'BLOQUEADO';
+        
+        tr.className = `cursor-pointer transition-colors group ${
+            isBlockedRow 
+            ? 'opacity-80 bg-red-500/5 text-red-500 hover:bg-red-500/10 hover:opacity-100' 
+            : 'hover:bg-blue-500/10'
+        }`;
+
+        // ACCIÓN DE EDICIÓN (Doble Click)
+tr.ondblclick = () => {
+    const configMap = {};
+    headers.forEach(h => {
+        const colKey = h.toUpperCase().trim();
+        // Sincronizado con el nombre del backend
+        const colConfig = rawConfig.find(c => String(c.ID_Columna || '').toUpperCase().trim() === colKey);
+        const marca = colConfig ? String(colConfig.Visible_Encabezado || '').toUpperCase().trim() : '';
+        
+        const isPK = colKey === `${tablePrefix}ID`;
+        const cleanH = colKey.replace(/_/g, '');
+        //const isBlocked = (marca === 'XX') || isPK || cleanH.includes('REGISTRO') || cleanH.includes('DAT01') || cleanH.includes('NOMBREC');
+const isXX = marca.includes('XX'); 
+
+const isBlocked = isXX || 
+                  colKey === `${tablePrefix}ID` || 
+                  cleanH.includes('REGISTRO') || 
+                  cleanH.includes('DAT01') || 
+                  cleanH.includes('NOMBREC');
+        configMap[h] = {
+            label: tableConfig.displayMap[h] || h,
+            editable: !isBlocked,
+            type: (h.endsWith('ID') && !isPK) ? 'select' : 'text'
+        };
+    });
+    localStorage.setItem('TABLE_CONFIG', JSON.stringify(configMap));
+    localStorage.setItem('TABLE_DATA', JSON.stringify({ ...row, TABLA_ORIGEN: currentTableName }));
+    window.location.href = 'FormData3.html';
+};
+
+        // Celda numeración indexada
+        const tdId = document.createElement('td');
+        tdId.className = 'table-data-cell sticky-id-cell text-center';
+        if (isBlockedRow) tdId.style.color = '#ef4444'; 
+        tdId.textContent = idx + 1;
+        tr.appendChild(tdId);
+
+        // Celdas de datos
+        headers.forEach(h => {
+            const cleanH = h.toUpperCase();
+            if (cleanH.endsWith('TYPEREG')) return;
+            if (cleanH === `${tablePrefix}ID` && shouldHideID) return;
+
+            const td = document.createElement('td');
+            td.className = 'table-data-cell px-3';
+            td.style.textAlign = tableConfig.alignMap[h] || 'left';                   
+            
+            if (isBlockedRow) td.style.color = '#ef4444';
+
+            const val = typeof getFormattedValue === 'function' ? getFormattedValue(h, row[h]) : row[h];
+            td.innerHTML = highlightText(val, typeof currentSearchTerm !== 'undefined' ? currentSearchTerm : "");
+            tr.appendChild(td);
+        });
+
+        tableBody.appendChild(tr);
+    });
+
+    if (window.lucide) lucide.createIcons();
+}
 
         function updateStatusTag(tableName) {
             const statusTag = document.getElementById('table-status-tag');
             if (!statusTag) return;
             
-            const friendly = getFriendlyName(tableName);
+            //const friendly = getFriendlyName(tableName);
+            const notfriendly = tableName;
             const isDefault = (tableName === DEFAULT_TABLE_NAME);
             
-            statusTag.textContent = friendly; // Ahora muestra "PRINCIPAL" en lugar de "Activa"
+            //statusTag.textContent = friendly;
+            statusTag.textContent = notfriendly; // Ahora muestra "TD101_XYZ" en lugar de "NOMBRE"
             statusTag.className = isDefault 
                 ? 'text-[10px] px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 border border-gray-500/30 uppercase tracking-tighter'
                 : 'text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase tracking-tighter';
