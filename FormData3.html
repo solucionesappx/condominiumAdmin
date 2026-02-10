@@ -74,6 +74,9 @@
                         <button onclick="duplicateCurrentRecord()" class="text-gray-400 hover:scale-110 transition-transform" title="Duplicar como Nuevo">
                             <i data-lucide="copy-plus" class="w-6 h-6"></i>
                         </button>
+                        <button onclick="DeleteRecord()" class="text-gray-400 hover:scale-110 transition-transform" title="Borrar Registro">
+                            <i data-lucide="trash-2" class="w-6 h-6"></i>
+                        </button>
                         <i id="header-icon-fixed-view" data-lucide="lock" class="w-6 h-6 text-blue-400 hidden"></i>
                         <button onclick="showRegisterMode()" class="text-green-400 hover:scale-110 transition-transform border-l-2 border-gray-600 pl-4" title="Nuevo Registro">
                             <i data-lucide="file-plus-2" class="w-6 h-6"></i>
@@ -849,6 +852,81 @@ console.groupEnd();
         if (window.lucide) lucide.createIcons();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+
+async function DeleteRecord() {
+    // 1. Recuperar datos y normalizar prefijos
+    const data = JSON.parse(localStorage.getItem('TABLE_DATA') || localStorage.getItem(STORAGE_DATA) || '{}');
+    const tableOrigin = data.TABLA_ORIGEN || "";
+    const prefix = tableOrigin.split('_')[0].toUpperCase();
+    
+    // Normalización de claves (Mayúsculas según el nuevo Backend)
+    const ownerKey = `${prefix}REGISTROUSER`;
+    const registroOwner = data[ownerKey] || data[`${prefix}RegistroUser`]; 
+
+    const usuarioLogueado = localStorage.getItem(KEYS.USUARIO_ID);
+    const idxCorrecto = localStorage.getItem('Usuario_Idx');
+
+    const idLogueadoStr = String(usuarioLogueado || "").trim();
+    const idOwnerStr = String(registroOwner || "").trim();
+
+    // 2. Validación de Propietario
+    if (!idOwnerStr || idOwnerStr !== idLogueadoStr) {
+        await showSystemModal({ 
+            title: 'Acceso Denegado', 
+            text: 'Solo el propietario de este registro o un Administrador pueden eliminarlo.', 
+            type: 'warning' 
+        });
+        return;
+    }
+
+    // 3. Confirmación de Eliminación (Informar al usuario)
+    await showSystemModal({
+        title: 'Confirmar Eliminación',
+        text: 'Este registro será borrado permanentemente, sin posibilidad de recuperación.',
+        type: 'warning'
+    });
+
+    // 4. Solicitar Idx Seguridad
+    const pinIngresado = prompt("Ingrese su Idx de Seguridad para autorizar el borrado:");
+    
+    if (pinIngresado === null) return; // Si cancela el prompt, salimos
+
+    if (pinIngresado !== idxCorrecto) {
+        await showSystemModal({ 
+            title: 'Error de Seguridad', 
+            text: 'El Idx de Seguridad es incorrecto.', 
+            type: 'warning' 
+        });
+        return;
+    }
+
+    // 5. Preparar Payload para el Backend
+    const payload = {
+        action: "deleteDynamicDataTD",
+        TABLA_DESTINO: tableOrigin,
+        CAMPO_CLAVE: `${prefix}ID`,
+        [`${prefix}ID`]: data[`${prefix}ID`],
+        usuario_id: idLogueadoStr
+    };
+
+    try {
+        // 6. Ejecución del envío
+        // executeSubmit mostrará el modal de "Proceso Realizado"
+        await executeSubmit(payload, 'Proceso completado');
+
+        // 7. Redirección Automática
+        // Regresamos a la tabla principal una vez que el servidor confirma el éxito
+        window.location.href = 'Datos2.html';
+
+    } catch (error) {
+        console.error("Error al eliminar:", error);
+        await showSystemModal({ 
+            title: 'Error Crítico', 
+            text: 'No se pudo completar la operación en el servidor.', 
+            type: 'warning' 
+        });
+    }
+}
 
     function showRegisterMode() {
         const duplicateBtn = document.getElementById('btn-duplicate-record');
