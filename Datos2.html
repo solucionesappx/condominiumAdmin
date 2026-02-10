@@ -170,104 +170,104 @@
         </div>
     </div>
 
-    <script>
-        const KEYS={NOMBRE:'Usuario_Nombre',PERFIL:'Usuario_Perfil',CORREO:'Usuario_Correo',VIEW_MODE:'App_View_Mode',THEME:'App_Theme',TIENDA:'Usuario_Tienda',TIENDA_ID:'Usuario_Tienda_ID',USUARIO_ID:'Usuario_ID'};
-        document.addEventListener('DOMContentLoaded',()=>{if(!localStorage.getItem(KEYS.CORREO))window.location.replace('index.html');initUI();if(window.lucide)lucide.createIcons()});
-        function initUI(){
-            const nom = localStorage.getItem(KEYS.NOMBRE);
-            if(nom) document.querySelector('h1').textContent = `¡Hola, ${nom.trim().split(/\s+/)[0]}!`;
-            applyViewMode(localStorage.getItem(KEYS.VIEW_MODE) || 'mobile');
-            document.querySelectorAll('.footer-btn').forEach(b => b.onclick = () => loadContent(b.getAttribute('data-section')));
-            if(!localStorage.getItem(KEYS.INPUT_ID)){['btn-agregar'].forEach(id => {const el = document.getElementById(id);if(el) el.classList.add('btn-disabled'); });}
-        }
-        function toggleView(){const m=localStorage.getItem(KEYS.VIEW_MODE)==='desktop'?'mobile':'desktop';localStorage.setItem(KEYS.VIEW_MODE,m);applyViewMode(m)}
-        function applyViewMode(m){
-            const c=document.getElementById('app-container'),i=document.getElementById('view-icon-container');
-            if(m==='desktop'){c.classList.replace('mode-mobile','mode-desktop');i.innerHTML='<i data-lucide="smartphone" class="w-5 h-5 text-blue-400"></i>'}
-            else{c.classList.replace('mode-desktop','mode-mobile');i.innerHTML='<i data-lucide="monitor" class="w-5 h-5 text-emerald-400"></i>'}
-            if(window.lucide)lucide.createIcons();
-        }
-        async function loadContent(s){
-            const NAV={'Base':'Base2.html','Inicio':'Inicio.html','Datos': 'Datos2.html','Agregar':'AgregarDat.html','Perfil':'PerfilUser2.html','Configuracion':'ConfigApp2.html'};
-            if(['Agregar'].includes(s) && !localStorage.getItem(KEYS.INPUT_ID)){return showSystemModal({title:'Acceso Imposible', text:'Registre el dato CLAVE para su búsqueda en la sección correspondiente.', type:'warning'});}    
-            if(s==='Configuracion' && localStorage.getItem(KEYS.PERFIL)!=='Admin') return showSystemModal({title:'Acceso Denegado',text:'Solo administradores.',type:'warning'});
-            if(NAV[s]) window.location.href=NAV[s];
-        }     
-        function showSystemModal({title,text,type='info'}){
-            return new Promise(res=>{
-                const m=document.getElementById('system-modal'),ti=document.getElementById('sys-modal-title'),te=document.getElementById('sys-modal-text'),ic=document.getElementById('sys-modal-icon'),ac=document.getElementById('sys-modal-actions');
-                ti.textContent=title;te.textContent=text;const colors={warning:'text-amber-400',info:'text-blue-400'},icons={warning:'alert-triangle',info:'info'};
-                ic.innerHTML=`<i data-lucide="${icons[type]}" class="w-12 h-12 ${colors[type]}"></i>`;ac.innerHTML='';
-                const b=document.createElement('button');b.className='px-6 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold';b.textContent='Aceptar';
-                b.onclick=()=>{m.classList.add('hidden');res(true)};ac.appendChild(b);m.classList.remove('hidden');lucide.createIcons();
-            });
-        }
-        function toggleTheme() {
-            const isLight = document.documentElement.classList.toggle('light-mode');
-            localStorage.setItem(KEYS.THEME, isLight ? 'light' : 'dark');
-            renderTiendaFooter();
-            if(window.lucide) lucide.createIcons();
-        }
-        function applyTheme() {
-            const theme = localStorage.getItem(KEYS.THEME) || 'dark';
-            if (theme === 'light') {document.documentElement.classList.add('light-mode');} 
-            else {document.documentElement.classList.remove('light-mode');}
-        }
-        function toggleGlobalLoader(show) {
-            const loader = document.getElementById('global-loader');
-            if (loader) { loader.classList.toggle('hidden', !show);
-            if (show && window.lucide) lucide.createIcons(); }
-        }
-        function formatNumberWithDots(v) {
-            if (!v && v !== 0) return '';
-            const number = parseFloat(String(v).replace(',', '.'));
-            if (isNaN(number)) return v;
-            const decimals = Math.abs(number - Math.round(number)) < 0.001 ? 0 : 2;
-            return new Intl.NumberFormat('es-ES', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(number);
-        }
-        function formatDate(v) {
-            if (!v) return 'N/A';
-            const d = new Date(v);
-            if (isNaN(d.getTime())) return v;
-            const day = d.getUTCDate().toString().padStart(2, '0');
-            const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
-            return `${day}/${month}/${d.getUTCFullYear()}`;
-        }
-        function formatDateTime(v) {
-            if (!v) return 'N/A';
-            const d = new Date(v);
-            if (isNaN(d.getTime())) return v;
-            const datePart = formatDate(v);
-            const timePart = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            return `${datePart} ${timePart}`;
-        }
-        function getFormattedValue(key, value) {
-            if (value === null || value === undefined || value === '') return '';
-            const cleanKey = String(key).toUpperCase();           
-            if (cleanKey.includes('REGISTRODATA')) { return formatDateTime(value);}
-            if (cleanKey.includes('FECHA')) { return formatDate(value);}
-            const isPotentiallyNumber = typeof value === 'number' || 
-                (!isNaN(parseFloat(value)) && isFinite(value) && String(value).length < 15);
-            if (isPotentiallyNumber && !cleanKey.includes('ID') && !cleanKey.includes('DATA')) {
-                return formatNumberWithDots(value);}
-            return value;
-        }
-        async function loadTableFriendlyNames() {
-            const userTienda = localStorage.getItem(KEYS.TIENDA) || 'DEFAULT';
-            try { const r = await fetch(`${GET_URL}?action=getTableFriendlyNames&appTienda=${userTienda}`); const res = await r.json();
-                if (res.success) {localStorage.setItem('TABLE_FRIENDLY_NAMES', JSON.stringify(res.data));}
-            } catch (e) { console.error("Error cargando nombres amigables:", e);}
-        }
-        function getFriendlyName(techName) {
-            const namesMap = JSON.parse(localStorage.getItem('TABLE_FRIENDLY_NAMES') || '{}');
-            return namesMap[techName]?.label || techName;
-        }
-        function logout(){localStorage.clear();window.location.href='index.html'}  
+<script>
+    const KEYS={NOMBRE:'Usuario_Nombre',PERFIL:'Usuario_Perfil',CORREO:'Usuario_Correo',VIEW_MODE:'App_View_Mode',THEME:'App_Theme',TIENDA:'Usuario_Tienda',TIENDA_ID:'Usuario_Tienda_ID',USUARIO_ID:'Usuario_ID'};
+    document.addEventListener('DOMContentLoaded',()=>{if(!localStorage.getItem(KEYS.CORREO))window.location.replace('index.html');initUI();if(window.lucide)lucide.createIcons()});
+    function initUI(){
+        const nom = localStorage.getItem(KEYS.NOMBRE);
+        if(nom) document.querySelector('h1').textContent = `¡Hola, ${nom.trim().split(/\s+/)[0]}!`;
+        applyViewMode(localStorage.getItem(KEYS.VIEW_MODE) || 'mobile');
+        document.querySelectorAll('.footer-btn').forEach(b => b.onclick = () => loadContent(b.getAttribute('data-section')));
+        if(!localStorage.getItem(KEYS.INPUT_ID)){['btn-agregar'].forEach(id => {const el = document.getElementById(id);if(el) el.classList.add('btn-disabled'); });}
+    }
+    function toggleView(){const m=localStorage.getItem(KEYS.VIEW_MODE)==='desktop'?'mobile':'desktop';localStorage.setItem(KEYS.VIEW_MODE,m);applyViewMode(m)}
+    function applyViewMode(m){
+        const c=document.getElementById('app-container'),i=document.getElementById('view-icon-container');
+        if(m==='desktop'){c.classList.replace('mode-mobile','mode-desktop');i.innerHTML='<i data-lucide="smartphone" class="w-5 h-5 text-blue-400"></i>'}
+        else{c.classList.replace('mode-desktop','mode-mobile');i.innerHTML='<i data-lucide="monitor" class="w-5 h-5 text-emerald-400"></i>'}
+        if(window.lucide)lucide.createIcons();
+    }
+    async function loadContent(s){
+        const NAV={'Base':'Base2.html','Inicio':'Inicio.html','Datos': 'Datos2.html','Agregar':'AgregarDat.html','Perfil':'PerfilUser2.html','Configuracion':'ConfigApp2.html'};
+        if(['Agregar'].includes(s) && !localStorage.getItem(KEYS.INPUT_ID)){return showSystemModal({title:'Acceso Imposible', text:'Registre el dato CLAVE para su búsqueda en la sección correspondiente.', type:'warning'});}    
+        if(s==='Configuracion' && localStorage.getItem(KEYS.PERFIL)!=='Admin') return showSystemModal({title:'Acceso Denegado',text:'Solo administradores.',type:'warning'});
+        if(NAV[s]) window.location.href=NAV[s];
+    }     
+    function showSystemModal({title,text,type='info'}){
+        return new Promise(res=>{
+            const m=document.getElementById('system-modal'),ti=document.getElementById('sys-modal-title'),te=document.getElementById('sys-modal-text'),ic=document.getElementById('sys-modal-icon'),ac=document.getElementById('sys-modal-actions');
+            ti.textContent=title;te.textContent=text;const colors={warning:'text-amber-400',info:'text-blue-400'},icons={warning:'alert-triangle',info:'info'};
+            ic.innerHTML=`<i data-lucide="${icons[type]}" class="w-12 h-12 ${colors[type]}"></i>`;ac.innerHTML='';
+            const b=document.createElement('button');b.className='px-6 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold';b.textContent='Aceptar';
+            b.onclick=()=>{m.classList.add('hidden');res(true)};ac.appendChild(b);m.classList.remove('hidden');lucide.createIcons();
+        });
+    }
+    function toggleTheme() {
+        const isLight = document.documentElement.classList.toggle('light-mode');
+        localStorage.setItem(KEYS.THEME, isLight ? 'light' : 'dark');
+        renderTiendaFooter();
+        if(window.lucide) lucide.createIcons();
+    }
+    function applyTheme() {
+        const theme = localStorage.getItem(KEYS.THEME) || 'dark';
+        if (theme === 'light') {document.documentElement.classList.add('light-mode');} 
+        else {document.documentElement.classList.remove('light-mode');}
+    }
+    function toggleGlobalLoader(show) {
+        const loader = document.getElementById('global-loader');
+        if (loader) { loader.classList.toggle('hidden', !show);
+        if (show && window.lucide) lucide.createIcons(); }
+    }
+    function formatNumberWithDots(v) {
+        if (!v && v !== 0) return '';
+        const number = parseFloat(String(v).replace(',', '.'));
+        if (isNaN(number)) return v;
+        const decimals = Math.abs(number - Math.round(number)) < 0.001 ? 0 : 2;
+        return new Intl.NumberFormat('es-ES', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(number);
+    }
+    function formatDate(v) {
+        if (!v) return 'N/A';
+        const d = new Date(v);
+        if (isNaN(d.getTime())) return v;
+        const day = d.getUTCDate().toString().padStart(2, '0');
+        const month = (d.getUTCMonth() + 1).toString().padStart(2, '0');
+        return `${day}/${month}/${d.getUTCFullYear()}`;
+    }
+    function formatDateTime(v) {
+        if (!v) return 'N/A';
+        const d = new Date(v);
+        if (isNaN(d.getTime())) return v;
+        const datePart = formatDate(v);
+        const timePart = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        return `${datePart} ${timePart}`;
+    }
+    function getFormattedValue(key, value) {
+        if (value === null || value === undefined || value === '') return '';
+        const cleanKey = String(key).toUpperCase();           
+        if (cleanKey.includes('REGISTRODATA')) { return formatDateTime(value);}
+        if (cleanKey.includes('FECHA')) { return formatDate(value);}
+        const isPotentiallyNumber = typeof value === 'number' || 
+            (!isNaN(parseFloat(value)) && isFinite(value) && String(value).length < 15);
+        if (isPotentiallyNumber && !cleanKey.includes('ID') && !cleanKey.includes('DATA')) {
+            return formatNumberWithDots(value);}
+        return value;
+    }
+    async function loadTableFriendlyNames() {
+        const userTienda = localStorage.getItem(KEYS.TIENDA) || 'DEFAULT';
+        try { const r = await fetch(`${GET_URL}?action=getTableFriendlyNames&appTienda=${userTienda}`); const res = await r.json();
+            if (res.success) {localStorage.setItem('TABLE_FRIENDLY_NAMES', JSON.stringify(res.data));}
+        } catch (e) { console.error("Error cargando nombres amigables:", e);}
+    }
+    function getFriendlyName(techName) {
+        const namesMap = JSON.parse(localStorage.getItem('TABLE_FRIENDLY_NAMES') || '{}');
+        return namesMap[techName]?.label || techName;
+    }
+    function logout(){localStorage.clear();window.location.href='index.html'}  
 
 console.group("🔍 REVISIÓN DE LOCALSTORAGE");
 console.log("👤 Datos de Usuario (KEYS):");
 Object.entries(KEYS).forEach(([key, storageKey]) => {
-    console.log(`   ${key}: ${localStorage.getItem(storageKey)}`);
+console.log(`   ${key}: ${localStorage.getItem(storageKey)}`);
 });
 
 console.log("📊 Configuración de Tabla (TABLE_CONFIG):");
@@ -277,364 +277,390 @@ console.log("📝 Datos de la Fila (TABLE_DATA):");
 console.table(JSON.parse(localStorage.getItem('TABLE_DATA') || '{}'));
 console.groupEnd();        
 
-    </script>
+</script>
 
-    <script>
-        const GET_URL = 'https://script.google.com/macros/s/AKfycbyVcnPmbbR9RXy6ekkvHT6ocTgm0Rsf1wxNQvQpSbEt7ubGVwBhxKqhNm0YeO_dI_XJIg/exec';
-        const DEFAULT_TABLE_NAME = 'TD101_MAIN'; 
-        let currentTableName = localStorage.getItem('LAST_VISITED_TABLE') || DEFAULT_TABLE_NAME;
-        let availableTablesList = [];        
-        let originalData = []; 
-        let rawConfig = []; 
-        let tableConfig = { columnOrder: [], displayMap: {}, alignMap: {} };
-        let sortConfig = { key: null, direction: null };
-        let currentSearchTerm = ""; 
+<script>
+    const GET_URL = 'https://script.google.com/macros/s/AKfycbyVcnPmbbR9RXy6ekkvHT6ocTgm0Rsf1wxNQvQpSbEt7ubGVwBhxKqhNm0YeO_dI_XJIg/exec';
+    const DEFAULT_TABLE_NAME = 'TD101_MAIN'; 
+    let currentTableName = localStorage.getItem('LAST_VISITED_TABLE') || DEFAULT_TABLE_NAME;
+    let availableTablesList = [];        
+    let originalData = []; 
+    let rawConfig = []; 
+    let tableConfig = { columnOrder: [], displayMap: {}, alignMap: {} };
+    let sortConfig = { key: null, direction: null };
+    let currentSearchTerm = ""; 
 
-        document.addEventListener('DOMContentLoaded', () => {
-            initDataApp();
-            setupSearch();
-            const btnReload = document.getElementById('reload-icon');
-            if(btnReload) btnReload.onclick = () => fetchData(currentTableName);
-        });
-    
-function showRegisterMode() {
-    const tableKey = String(currentTableName).trim().toUpperCase();
-    const tablePrefix = tableKey.split('_')[0];
-    const configMap = {};
-    const rawHeaders = tableConfig.columnOrder || (originalData.length > 0 ? Object.keys(originalData[0]) : []);
-    
-    rawHeaders.forEach(h => {
-        const colKey = String(h).trim().toUpperCase();
-        
-        // Buscamos usando las claves exactas del backend: ID_Columna
-        const colConfig = rawConfig.find(c => 
-            String(c.ID_Columna || '').trim().toUpperCase() === colKey
-        );                
-        
-        // Buscamos usando la clave exacta del backend: Visible_Encabezado
-        const marca = colConfig ? String(colConfig.Visible_Encabezado || '').trim().toUpperCase() : '';
-        const cleanH = colKey.replace(/_/g, '');
-
-const isXX = marca.includes('XX'); 
-
-const isBlocked = isXX || 
-                  colKey === `${tablePrefix}ID` || 
-                  cleanH.includes('REGISTRO') || 
-                  cleanH.includes('DAT01') || 
-                  cleanH.includes('NOMBREC');
-
-        configMap[h] = {
-            label: tableConfig.displayMap[h] || h,
-            editable: !isBlocked 
-        };
+    document.addEventListener('DOMContentLoaded', () => {
+        initDataApp();
+        setupSearch();
+        const btnReload = document.getElementById('reload-icon');
+        if(btnReload) btnReload.onclick = () => fetchData(currentTableName);
     });
 
-    localStorage.setItem('TABLE_CONFIG', JSON.stringify(configMap));
-    localStorage.setItem('TABLE_DATA', JSON.stringify({ TABLA_ORIGEN: currentTableName, IS_NEW: true }));           
-    window.location.href = 'FormData3.html';
-}
-
-        function updateTableSelector(tables) {
-            const selector = document.getElementById('table-selector');
-            if (!selector) return;
-
-            if (availableTablesList.join(',') !== tables.join(',')) {
-                availableTablesList = tables;
-                selector.innerHTML = tables.map(name => {
-                    const label = getFriendlyName(name);
-                    return `<option value="${name}" ${name === currentTableName ? 'selected' : ''}>${label}</option>`;
-                }).join('');
-            }
-            selector.onchange = (e) => {
-                fetchData(e.target.value);
-            };
-        }
-
-        async function fetchData(tableName) {
-            const selector = document.getElementById('table-selector');
-            if (selector) selector.disabled = true; 
-            if (typeof toggleGlobalLoader === 'function') toggleGlobalLoader(true); 
-            await loadTableFriendlyNames();
-            const userTienda = localStorage.getItem(KEYS.TIENDA) || 'DEFAULT';           
-            const url = `${GET_URL}?tableName=${encodeURIComponent(tableName)}&userTienda=${encodeURIComponent(userTienda)}`;
-            try {
-                const response = await fetch(url);               
-                if (!response.ok) throw new Error(`Error de red: ${response.status}`);               
-                const res = await response.json();
-                
-                if (res.success) {
-                    currentTableName = tableName;
-                    localStorage.setItem('LAST_VISITED_TABLE', tableName); 
-                    originalData = res.data || [];
-                    rawConfig = res.fullConfig || res.config || [];
-                    currentSearchTerm = "";
-                    const searchInput = document.getElementById('search-input');
-                    if (searchInput) searchInput.value = "";
-                    if (res.availableTables) {
-                        updateTableSelector(res.availableTables);
-                    }
-                    updateStatusTag(tableName);
-                    if (selector) selector.value = tableName;
-                    tableConfig.columnOrder = res.columnOrder || (originalData.length > 0 ? Object.keys(originalData[0]) : []);
-                    tableConfig.displayMap = res.displayMap || {};
-                    tableConfig.alignMap = res.alignMap || {};
-                    renderTable(originalData);
-                    updateMetrics(originalData);
-                    if (window.lucide) lucide.createIcons();                   
-                } else {
-                    const errorMsg = res.message || res.error || "Error desconocido en el servidor";
-                    if (typeof showSystemModal === 'function') {
-                        showSystemModal({ title: 'Atención', text: errorMsg, type: 'warning' });
-                    } else {
-                        alert("Error: " + errorMsg);
-                    }
-                }
-            } catch (err) {
-                console.error("Error crítico en fetchData:", err);
-                if (typeof showSystemModal === 'function') {
-                    showSystemModal({ title: 'Error de Conexión', text: "No se pudo establecer comunicación con el servidor.", type: 'warning' });
-                }
-            } finally {
-                if (selector) selector.disabled = false; 
-                if (typeof toggleGlobalLoader === 'function') toggleGlobalLoader(false);
-            }
-        }
-
-function renderTable(data) {
-    const container = document.getElementById('data-table-container');
-    if (!container) return;            
-    
-    container.innerHTML = `
-        <table id="main-table">
-            <thead><tr id="table-header"></tr></thead>
-            <tbody id="table-body"></tbody>
-        </table>
-    `; 
+    function showRegisterMode() {
+        const tableKey = String(currentTableName).trim().toUpperCase();
+        const tablePrefix = tableKey.split('_')[0];
+        const configMap = {};
+        const rawHeaders = tableConfig.columnOrder || (originalData.length > 0 ? Object.keys(originalData[0]) : []);
+        
+        rawHeaders.forEach(h => {
+            const colKey = String(h).trim().toUpperCase();
             
-    const tableHeader = document.getElementById('table-header');
-    const tableBody = document.getElementById('table-body');
-    const tableKey = String(currentTableName).trim().toUpperCase();
-    const tablePrefix = tableKey.split('_')[0];
-    const headers = tableConfig.columnOrder; 
-    
-    const excludedIDTables = ['TD101', 'TD102', 'TD201'];
-    const shouldHideID = excludedIDTables.includes(tablePrefix);
+            // Buscamos usando las claves exactas del backend: ID_Columna
+            const colConfig = rawConfig.find(c => 
+                String(c.ID_Columna || '').trim().toUpperCase() === colKey
+            );                
+            
+            // Buscamos usando la clave exacta del backend: Visible_Encabezado
+            const marca = colConfig ? String(colConfig.Visible_Encabezado || '').trim().toUpperCase() : '';
+            const cleanH = colKey.replace(/_/g, '');
 
-    // Celda de numeración (#)
-    const thId = document.createElement('th');
-    thId.className = 'sticky-id-cell';
-    thId.innerHTML = `<div class="header-content" style="justify-content: center;"><span>#</span></div>`;
-    tableHeader.appendChild(thId);
+    const isXX = marca.includes('XX'); 
 
-    // Dibujar encabezados (TH)
-    headers.forEach(h => {
-        const cleanH = h.toUpperCase();
-        if (cleanH.endsWith('TYPEREG')) return;
-        if (cleanH === `${tablePrefix}ID` && shouldHideID) return;
+    const isBlocked = isXX || 
+                    colKey === `${tablePrefix}ID` || 
+                    cleanH.includes('REGISTRO') || 
+                    cleanH.includes('DAT01') || 
+                    cleanH.includes('NOMBREC');
 
-        const th = document.createElement('th');
-        const friendlyName = tableConfig.displayMap[h] || h;
-        let iconName = sortConfig.key === h ? (sortConfig.direction === 'desc' ? 'chevron-down' : 'chevron-up') : 'chevrons-up-down';               
-        
-        th.innerHTML = `
-            <div class="header-content" style="justify-content: center;">
-                <span>${friendlyName}</span>
-                <i data-lucide="${iconName}" class="w-4 h-4 opacity-30"></i>
-            </div>`;
-        th.onclick = () => handleSort(h);
-        tableHeader.appendChild(th);
-    });
+            configMap[h] = {
+                label: tableConfig.displayMap[h] || h,
+                editable: !isBlocked 
+            };
+        });
 
-    // Dibujar filas (TR)
-    data.forEach((row, idx) => {
-        const tr = document.createElement('tr');
-        const typeRegKey = Object.keys(row).find(k => k.toUpperCase().endsWith('TYPEREG'));
-        const isBlockedRow = typeRegKey && String(row[typeRegKey]).toUpperCase() === 'BLOQUEADO';
-        
-        tr.className = `cursor-pointer transition-colors group ${
-            isBlockedRow 
-            ? 'opacity-80 bg-red-500/5 text-red-500 hover:bg-red-500/10 hover:opacity-100' 
-            : 'hover:bg-blue-500/10'
-        }`;
+        localStorage.setItem('TABLE_CONFIG', JSON.stringify(configMap));
+        localStorage.setItem('TABLE_DATA', JSON.stringify({ TABLA_ORIGEN: currentTableName, IS_NEW: true }));           
+        window.location.href = 'FormData3.html';
+    }
 
-        // ACCIÓN DE EDICIÓN (Doble Click)
-tr.ondblclick = () => {
-    const configMap = {};
-    headers.forEach(h => {
-        const colKey = h.toUpperCase().trim();
-        // Sincronizado con el nombre del backend
-        const colConfig = rawConfig.find(c => String(c.ID_Columna || '').toUpperCase().trim() === colKey);
-        const marca = colConfig ? String(colConfig.Visible_Encabezado || '').toUpperCase().trim() : '';
-        
-        const isPK = colKey === `${tablePrefix}ID`;
-        const cleanH = colKey.replace(/_/g, '');
-        //const isBlocked = (marca === 'XX') || isPK || cleanH.includes('REGISTRO') || cleanH.includes('DAT01') || cleanH.includes('NOMBREC');
-const isXX = marca.includes('XX'); 
+    function updateTableSelector(tables) {
+        const selector = document.getElementById('table-selector');
+        if (!selector) return;
 
-const isBlocked = isXX || 
-                  colKey === `${tablePrefix}ID` || 
-                  cleanH.includes('REGISTRO') || 
-                  cleanH.includes('DAT01') || 
-                  cleanH.includes('NOMBREC');
-        configMap[h] = {
-            label: tableConfig.displayMap[h] || h,
-            editable: !isBlocked,
-            type: (h.endsWith('ID') && !isPK) ? 'select' : 'text'
+        if (availableTablesList.join(',') !== tables.join(',')) {
+            availableTablesList = tables;
+            selector.innerHTML = tables.map(name => {
+                const label = getFriendlyName(name);
+                return `<option value="${name}" ${name === currentTableName ? 'selected' : ''}>${label}</option>`;
+            }).join('');
+        }
+        selector.onchange = (e) => {
+            fetchData(e.target.value);
         };
-    });
-    localStorage.setItem('TABLE_CONFIG', JSON.stringify(configMap));
-    localStorage.setItem('TABLE_DATA', JSON.stringify({ ...row, TABLA_ORIGEN: currentTableName }));
-    window.location.href = 'FormData3.html';
-};
+    }
 
-        // Celda numeración indexada
-        const tdId = document.createElement('td');
-        tdId.className = 'table-data-cell sticky-id-cell text-center';
-        if (isBlockedRow) tdId.style.color = '#ef4444'; 
-        tdId.textContent = idx + 1;
-        tr.appendChild(tdId);
+    async function fetchData(tableName) {
+        const selector = document.getElementById('table-selector');
+        if (selector) selector.disabled = true; 
+        if (typeof toggleGlobalLoader === 'function') toggleGlobalLoader(true); 
+        await loadTableFriendlyNames();
+        const userTienda = localStorage.getItem(KEYS.TIENDA) || 'DEFAULT';           
+        const url = `${GET_URL}?tableName=${encodeURIComponent(tableName)}&userTienda=${encodeURIComponent(userTienda)}`;
+        try {
+            const response = await fetch(url);               
+            if (!response.ok) throw new Error(`Error de red: ${response.status}`);               
+            const res = await response.json();
+            
+            if (res.success) {
+                currentTableName = tableName;
+                localStorage.setItem('LAST_VISITED_TABLE', tableName); 
+                originalData = res.data || [];
+                rawConfig = res.fullConfig || res.config || [];
+                currentSearchTerm = "";
+                const searchInput = document.getElementById('search-input');
+                if (searchInput) searchInput.value = "";
+                if (res.availableTables) {
+                    updateTableSelector(res.availableTables);
+                }
+                updateStatusTag(tableName);
+                if (selector) selector.value = tableName;
+                tableConfig.columnOrder = res.columnOrder || (originalData.length > 0 ? Object.keys(originalData[0]) : []);
+                tableConfig.displayMap = res.displayMap || {};
+                tableConfig.alignMap = res.alignMap || {};
+                renderTable(originalData);
+                updateMetrics(originalData);
+                if (window.lucide) lucide.createIcons();                   
+            } else {
+                const errorMsg = res.message || res.error || "Error desconocido en el servidor";
+                if (typeof showSystemModal === 'function') {
+                    showSystemModal({ title: 'Atención', text: errorMsg, type: 'warning' });
+                } else {
+                    alert("Error: " + errorMsg);
+                }
+            }
+        } catch (err) {
+            console.error("Error crítico en fetchData:", err);
+            if (typeof showSystemModal === 'function') {
+                showSystemModal({ title: 'Error de Conexión', text: "No se pudo establecer comunicación con el servidor.", type: 'warning' });
+            }
+        } finally {
+            if (selector) selector.disabled = false; 
+            if (typeof toggleGlobalLoader === 'function') toggleGlobalLoader(false);
+        }
+    }
 
-        // Celdas de datos
+    function renderTable(data) {
+        const container = document.getElementById('data-table-container');
+        if (!container) return;            
+        
+        container.innerHTML = `
+            <table id="main-table">
+                <thead><tr id="table-header"></tr></thead>
+                <tbody id="table-body"></tbody>
+            </table>
+        `; 
+                
+        const tableHeader = document.getElementById('table-header');
+        const tableBody = document.getElementById('table-body');
+        const tableKey = String(currentTableName).trim().toUpperCase();
+        const tablePrefix = tableKey.split('_')[0];
+        const headers = tableConfig.columnOrder; 
+        
+        const excludedIDTables = ['TD101', 'TD102', 'TD201'];
+        const shouldHideID = excludedIDTables.includes(tablePrefix);
+
+        // Celda de numeración (#)
+        const thId = document.createElement('th');
+        thId.className = 'sticky-id-cell';
+        thId.innerHTML = `<div class="header-content" style="justify-content: center;"><span>#</span></div>`;
+        tableHeader.appendChild(thId);
+
+        // Dibujar encabezados (TH)
         headers.forEach(h => {
             const cleanH = h.toUpperCase();
             if (cleanH.endsWith('TYPEREG')) return;
             if (cleanH === `${tablePrefix}ID` && shouldHideID) return;
 
-            const td = document.createElement('td');
-            td.className = 'table-data-cell px-3';
-            td.style.textAlign = tableConfig.alignMap[h] || 'left';                   
+            const th = document.createElement('th');
+            const friendlyName = tableConfig.displayMap[h] || h;
+            let iconName = sortConfig.key === h ? (sortConfig.direction === 'desc' ? 'chevron-down' : 'chevron-up') : 'chevrons-up-down';               
             
-            if (isBlockedRow) td.style.color = '#ef4444';
-
-            const val = typeof getFormattedValue === 'function' ? getFormattedValue(h, row[h]) : row[h];
-            td.innerHTML = highlightText(val, typeof currentSearchTerm !== 'undefined' ? currentSearchTerm : "");
-            tr.appendChild(td);
+            th.innerHTML = `
+                <div class="header-content" style="justify-content: center;">
+                    <span>${friendlyName}</span>
+                    <i data-lucide="${iconName}" class="w-4 h-4 opacity-30"></i>
+                </div>`;
+            th.onclick = () => handleSort(h);
+            tableHeader.appendChild(th);
         });
 
-        tableBody.appendChild(tr);
-    });
-
-    if (window.lucide) lucide.createIcons();
-}
-
-        function updateStatusTag(tableName) {
-            const statusTag = document.getElementById('table-status-tag');
-            if (!statusTag) return;
+        // Dibujar filas (TR)
+        data.forEach((row, idx) => {
+            const tr = document.createElement('tr');
+            const typeRegKey = Object.keys(row).find(k => k.toUpperCase().endsWith('TYPEREG'));
+            const isBlockedRow = typeRegKey && String(row[typeRegKey]).toUpperCase() === 'BLOQUEADO';
             
-            //const friendly = getFriendlyName(tableName);
-            const notfriendly = tableName;
-            const isDefault = (tableName === DEFAULT_TABLE_NAME);
-            
-            //statusTag.textContent = friendly;
-            statusTag.textContent = notfriendly; // Ahora muestra "TD101_XYZ" en lugar de "NOMBRE"
-            statusTag.className = isDefault 
-                ? 'text-[10px] px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 border border-gray-500/30 uppercase tracking-tighter'
-                : 'text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase tracking-tighter';
-        }
+            tr.className = `cursor-pointer transition-colors group ${
+                isBlockedRow 
+                ? 'opacity-80 bg-red-500/5 text-red-500 hover:bg-red-500/10 hover:opacity-100' 
+                : 'hover:bg-blue-500/10'
+            }`;
 
-        function initDataApp() {
-            const tiendaIdDisplay = document.getElementById('header-tienda-id');
-            const tiendaIdValue = localStorage.getItem(KEYS.TIENDA_ID);
-            if (tiendaIdDisplay && tiendaIdValue) tiendaIdDisplay.textContent = tiendaIdValue;
-            fetchData(currentTableName);
-        }
+            // ACCIÓN DE EDICIÓN (Doble Click)
+            tr.ondblclick = () => {
+                const configMap = {};
+                const tableKey = String(currentTableName).trim().toUpperCase();
+                const tablePrefix = tableKey.split('_')[0];
+                
+                // Definimos los nombres técnicos de los campos de auditoría para esta tabla
+                const securityField = `${tablePrefix}REGISTROUSER`;
+                const auditDataField = `${tablePrefix}REGISTRODATA`;
 
-        function setupSearch() {
-            const input = document.getElementById('search-input');
-            const clear = document.getElementById('clear-search-btn');
-            if(!input) return;
-            input.addEventListener('input', (e) => {
-                currentSearchTerm = e.target.value.toLowerCase();
-                applyFiltersAndSort();
-            });
-            if(clear) clear.onclick = () => {
-                input.value = '';
-                currentSearchTerm = "";
-                applyFiltersAndSort();
+                headers.forEach(h => {
+                    const colKey = h.toUpperCase().trim();
+                    // Buscamos la configuración que viene del backend para esta columna
+                    const colConfig = rawConfig.find(c => String(c.ID_Columna || '').toUpperCase().trim() === colKey);
+                    const marca = colConfig ? String(colConfig.Visible_Encabezado || '').toUpperCase().trim() : '';
+                    
+                    const isPK = colKey === `${tablePrefix}ID`;
+                    const cleanH = colKey.replace(/_/g, '');
+                    const isXX = marca.includes('XX'); 
+
+                    // Lógica de Bloqueo: Campos no editables
+                    // Bloqueamos si tiene 'XX', si es la llave primaria, o si son campos de auditoría/identidad
+                    const isBlocked = isXX || 
+                                    isPK || 
+                                    colKey === securityField || 
+                                    colKey === auditDataField ||
+                                    cleanH.includes('REGISTRO') || 
+                                    cleanH.includes('DAT01') || 
+                                    cleanH.includes('NOMBREC');
+
+                    // Construimos el mapa de configuración para FormData3.html
+                    configMap[h] = {
+                        label: tableConfig.displayMap[h] || h,
+                        editable: !isBlocked, // Si está bloqueado, editable será false
+                        type: (h.endsWith('ID') && !isPK) ? 'select' : 'text'
+                    };
+                });
+
+                // GUARDADO EN STORAGE
+                // 1. Guardamos la configuración de los campos (qué se edita y qué no)
+                localStorage.setItem('TABLE_CONFIG', JSON.stringify(configMap));
+
+                // 2. Guardamos la DATA:
+                // Al usar { ...row } nos aseguramos de pasar TODO el objeto que vino del servidor,
+                // incluyendo el campo RegistroUser aunque no esté en el 'configMap' como visible.
+                const dataToSave = { 
+                    ...row, 
+                    TABLA_ORIGEN: currentTableName,
+                    // Forzamos que el prefijo esté disponible para facilitar el borrado
+                    PREFIX_ORIGEN: tablePrefix 
+                };
+                
+                localStorage.setItem('TABLE_DATA', JSON.stringify(dataToSave));
+
+                // Redirección al formulario
+                window.location.href = 'FormData3.html';
             };
-        }
 
-        function highlightText(text, term) {
-            if (!term || term.trim() === "") return text;
-            const stringText = String(text);
-            const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(`(${escapedTerm})`, 'gi');
-            return stringText.replace(regex, '<span class="search-highlight">$1</span>');
-        }
+            // Celda numeración indexada
+            const tdId = document.createElement('td');
+            tdId.className = 'table-data-cell sticky-id-cell text-center';
+            if (isBlockedRow) tdId.style.color = '#ef4444'; 
+            tdId.textContent = idx + 1;
+            tr.appendChild(tdId);
 
-        function handleSort(key) {
-            if (sortConfig.key === key) {
-                sortConfig.direction = (sortConfig.direction === 'desc') ? 'asc' : 'desc';
-            } else {
-                sortConfig.key = key;
-                sortConfig.direction = 'desc';
-            }
+            // Celdas de datos
+            headers.forEach(h => {
+                const cleanH = h.toUpperCase();
+                if (cleanH.endsWith('TYPEREG')) return;
+                if (cleanH === `${tablePrefix}ID` && shouldHideID) return;
+
+                const td = document.createElement('td');
+                td.className = 'table-data-cell px-3';
+                td.style.textAlign = tableConfig.alignMap[h] || 'left';                   
+                
+                if (isBlockedRow) td.style.color = '#ef4444';
+
+                const val = typeof getFormattedValue === 'function' ? getFormattedValue(h, row[h]) : row[h];
+                td.innerHTML = highlightText(val, typeof currentSearchTerm !== 'undefined' ? currentSearchTerm : "");
+                tr.appendChild(td);
+            });
+
+            tableBody.appendChild(tr);
+        });
+
+        if (window.lucide) lucide.createIcons();
+    }
+
+    function updateStatusTag(tableName) {
+        const statusTag = document.getElementById('table-status-tag');
+        if (!statusTag) return;
+        
+        //const friendly = getFriendlyName(tableName);
+        const notfriendly = tableName;
+        const isDefault = (tableName === DEFAULT_TABLE_NAME);
+        
+        //statusTag.textContent = friendly;
+        statusTag.textContent = notfriendly; // Ahora muestra "TD101_XYZ" en lugar de "NOMBRE"
+        statusTag.className = isDefault 
+            ? 'text-[10px] px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 border border-gray-500/30 uppercase tracking-tighter'
+            : 'text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 uppercase tracking-tighter';
+    }
+
+    function initDataApp() {
+        const tiendaIdDisplay = document.getElementById('header-tienda-id');
+        const tiendaIdValue = localStorage.getItem(KEYS.TIENDA_ID);
+        if (tiendaIdDisplay && tiendaIdValue) tiendaIdDisplay.textContent = tiendaIdValue;
+        fetchData(currentTableName);
+    }
+
+    function setupSearch() {
+        const input = document.getElementById('search-input');
+        const clear = document.getElementById('clear-search-btn');
+        if(!input) return;
+        input.addEventListener('input', (e) => {
+            currentSearchTerm = e.target.value.toLowerCase();
             applyFiltersAndSort();
+        });
+        if(clear) clear.onclick = () => {
+            input.value = '';
+            currentSearchTerm = "";
+            applyFiltersAndSort();
+        };
+    }
+
+    function highlightText(text, term) {
+        if (!term || term.trim() === "") return text;
+        const stringText = String(text);
+        const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${escapedTerm})`, 'gi');
+        return stringText.replace(regex, '<span class="search-highlight">$1</span>');
+    }
+
+    function handleSort(key) {
+        if (sortConfig.key === key) {
+            sortConfig.direction = (sortConfig.direction === 'desc') ? 'asc' : 'desc';
+        } else {
+            sortConfig.key = key;
+            sortConfig.direction = 'desc';
+        }
+        applyFiltersAndSort();
+    }
+
+    function updateMetrics(data) {
+        const m = {
+            total: document.querySelector('[data-metric="total"]'),
+            morosos: document.querySelector('[data-metric="Morosos"]'),
+            solventes: document.querySelector('[data-metric="Solventes"]')
+        };
+
+        if (!data || !Array.isArray(data)) return;
+
+        const keys = data.length > 0 ? Object.keys(data[0]) : [];
+        const typeRegField = keys.find(k => k.toUpperCase().endsWith('TYPEREG'));
+        const estadoField = keys.find(k => k.toUpperCase().endsWith('ESTADO')) || 'ESTADO';
+
+        const activeData = data.filter(r => {
+            if (!typeRegField) return true; // Si no existe la columna de control, pasan todos
+            const regStatus = String(r[typeRegField] || '').trim().toUpperCase();
+            return regStatus !== 'BLOQUEADO';
+        });
+
+        if (m.total) m.total.textContent = activeData.length;
+
+        if (m.morosos) {
+            m.morosos.textContent = activeData.filter(r => 
+                String(r[estadoField] || '').trim().toUpperCase() === 'MOROSO'
+            ).length;
         }
 
-        function updateMetrics(data) {
-            const m = {
-                total: document.querySelector('[data-metric="total"]'),
-                morosos: document.querySelector('[data-metric="Morosos"]'),
-                solventes: document.querySelector('[data-metric="Solventes"]')
-            };
+        if (m.solventes) {
+            m.solventes.textContent = activeData.filter(r => 
+                String(r[estadoField] || '').trim().toUpperCase() === 'SOLVENTE'
+            ).length;
+        }
+    }
 
-            if (!data || !Array.isArray(data)) return;
+    function applyFiltersAndSort() {
+        let processedData = [...originalData];
 
-            const keys = data.length > 0 ? Object.keys(data[0]) : [];
-            const typeRegField = keys.find(k => k.toUpperCase().endsWith('TYPEREG'));
-            const estadoField = keys.find(k => k.toUpperCase().endsWith('ESTADO')) || 'ESTADO';
-
-            const activeData = data.filter(r => {
-                if (!typeRegField) return true; // Si no existe la columna de control, pasan todos
-                const regStatus = String(r[typeRegField] || '').trim().toUpperCase();
-                return regStatus !== 'BLOQUEADO';
+        if (currentSearchTerm) {
+            processedData = processedData.filter(row => {
+                return Object.keys(row).some(key => {
+                    const visibleValue = String(getFormattedValue(key, row[key])).toLowerCase();
+                    return visibleValue.includes(currentSearchTerm);
+                });
             });
-
-            if (m.total) m.total.textContent = activeData.length;
-
-            if (m.morosos) {
-                m.morosos.textContent = activeData.filter(r => 
-                    String(r[estadoField] || '').trim().toUpperCase() === 'MOROSO'
-                ).length;
-            }
-
-            if (m.solventes) {
-                m.solventes.textContent = activeData.filter(r => 
-                    String(r[estadoField] || '').trim().toUpperCase() === 'SOLVENTE'
-                ).length;
-            }
         }
-
-        function applyFiltersAndSort() {
-            let processedData = [...originalData];
-
-            if (currentSearchTerm) {
-                processedData = processedData.filter(row => {
-                    return Object.keys(row).some(key => {
-                        const visibleValue = String(getFormattedValue(key, row[key])).toLowerCase();
-                        return visibleValue.includes(currentSearchTerm);
-                    });
-                });
-            }
-            
-            if (sortConfig.key && sortConfig.direction) {
-                processedData.sort((a, b) => {
-                    let valA = a[sortConfig.key], valB = b[sortConfig.key];
-                    let numA = parseFloat(String(valA).replace(',', '.')), numB = parseFloat(String(valB).replace(',', '.'));
-                    if (!isNaN(numA) && !isNaN(numB)) { valA = numA; valB = numB; }
-                    else { valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase(); }
-                    if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-                    if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-                    return 0;
-                });
-            }
-            updateMetrics(processedData); 
-            renderTable(processedData);
+        
+        if (sortConfig.key && sortConfig.direction) {
+            processedData.sort((a, b) => {
+                let valA = a[sortConfig.key], valB = b[sortConfig.key];
+                let numA = parseFloat(String(valA).replace(',', '.')), numB = parseFloat(String(valB).replace(',', '.'));
+                if (!isNaN(numA) && !isNaN(numB)) { valA = numA; valB = numB; }
+                else { valA = String(valA).toLowerCase(); valB = String(valB).toLowerCase(); }
+                if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
         }
+        updateMetrics(processedData); 
+        renderTable(processedData);
+    }
 
-    </script>
+</script>
 </body>
 </html>
-
-
