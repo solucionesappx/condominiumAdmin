@@ -99,19 +99,27 @@
                     <div class="w-full text-left">
                         <h2 id="formTitle" class="text-[22px] font-bold text-white border-b-2 border-gray-600">Editar Selección</h2>
                     </div> 
-                    <div class="flex flex-wrap gap-2 w-full justify-end items-center">  
+                    <div class="flex flex-wrap gap-3 w-full justify-end items-center">  
+                        <div class="flex items-center gap-1 bg-gray-800/40 px-2">
+                            <i data-lucide="lock" class="w-4 h-4 text-red-400"></i>                           
+                            <button type="button" onclick="toggleRecordStatus('edit')" class="focus:outline-none flex items-center px-1">
+                                <i id="toggle-icon-edit" data-lucide="toggle-right" class="w-6 h-6 transition-colors"></i>
+                            </button>
+                            <i data-lucide="lock-open" class="w-4 h-4 text-green-400"></i>
+                            <input type="hidden" name="PREFIX_TYPEREG" id="input-typereg-edit">
+                        </div>
                         <button id="btn-duplicate-record" 
                                 onclick="duplicateCurrentRecord()" 
                                 class="text-blue-400 hover:scale-110 transition-transform hidden" 
                                 title="Duplicar como Nuevo">
                             <i data-lucide="copy-plus" class="w-6 h-6"></i>
                         </button>
-                        <i id="header-icon-fixed-edit" data-lucide="lock" class="w-6 h-6 text-blue-400 hidden"></i>    
-                        <button onclick="showViewMode()" class="text-red-400 hover:scale-110 transition-transform border-l-2 border-gray-600 pl-4"">
+                        <button onclick="showViewMode()" class="text-red-400 hover:scale-110 transition-transform border-l-2 border-gray-600 pl-4">
                             <i data-lucide="circle-x" class="w-6 h-6"></i>
                         </button>
                     </div>
-                </div>               
+                </div>                
+                
                 <form id="editDataForm" class="space-y-1">
                     <input type="hidden" id="formAction" name="action" value="editDynamicDataTD">                   
                     <div id="editDataFormFields" class="space-y-1"></div>                   
@@ -136,10 +144,17 @@
     </div>
 
     <div id="system-modal" class="hidden modal-overlay">
-        <div class="modal-content p-6 text-center">
+        <div class="modal-content p-6 text-center max-w-xs">
             <div id="sys-modal-icon" class="mb-4 flex justify-center"></div>
             <h3 id="sys-modal-title" class="text-lg font-bold text-white mb-2"></h3>
-            <p id="sys-modal-text" class="text-gray-400 text-sm mb-6"></p>
+            <p id="sys-modal-text" class="text-gray-400 text-sm mb-4"></p>
+            
+            <div id="sys-modal-input-container" class="hidden mb-6">
+                <input type="text" id="sys-modal-input" 
+                    class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-center focus:border-blue-500 outline-none"
+                    placeholder="Escribe aquí...">
+            </div>
+
             <div id="sys-modal-actions" class="flex gap-3 justify-center"></div>
         </div>
     </div>
@@ -167,15 +182,81 @@
         if(s==='Configuracion' && localStorage.getItem(KEYS.PERFIL)!=='Admin') return showSystemModal({title:'Acceso Denegado',text:'Solo administradores.',type:'warning'});
         if(NAV[s]) window.location.href=NAV[s];
     }     
-    function showSystemModal({title,text,type='info'}){
-        return new Promise(res=>{
-            const m=document.getElementById('system-modal'),ti=document.getElementById('sys-modal-title'),te=document.getElementById('sys-modal-text'),ic=document.getElementById('sys-modal-icon'),ac=document.getElementById('sys-modal-actions');
-            ti.textContent=title;te.textContent=text;const colors={warning:'text-amber-400',info:'text-blue-400'},icons={warning:'alert-triangle',info:'info'};
-            ic.innerHTML=`<i data-lucide="${icons[type]}" class="w-12 h-12 ${colors[type]}"></i>`;ac.innerHTML='';
-            const b=document.createElement('button');b.className='px-6 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold';b.textContent='Aceptar';
-            b.onclick=()=>{m.classList.add('hidden');res(true)};ac.appendChild(b);m.classList.remove('hidden');lucide.createIcons();
-        });
+function showSystemModal({
+    title, 
+    text, 
+    type = 'info', 
+    showCancel = false, 
+    isPrompt = false, 
+    placeholder = '...'
+}) {
+    return new Promise(res => {
+        const m = document.getElementById('system-modal'),
+              ti = document.getElementById('sys-modal-title'),
+              te = document.getElementById('sys-modal-text'),
+              ic = document.getElementById('sys-modal-icon'),
+              ac = document.getElementById('sys-modal-actions'),
+              iCont = document.getElementById('sys-modal-input-container'),
+              input = document.getElementById('sys-modal-input');
+
+        // Configuración visual básica
+        ti.textContent = title;
+        te.textContent = text;
+        const colors = { warning: 'text-amber-400', info: 'text-blue-400', danger: 'text-red-400' },
+              icons = { warning: 'alert-triangle', info: 'info', danger: 'trash-2' };
+        
+        ic.innerHTML = `<i data-lucide="${icons[type]}" class="w-12 h-12 ${colors[type]}"></i>`;
+        ac.innerHTML = '';
+        
+        // Manejo del Input (Prompt)
+        if (isPrompt) {
+            iCont.classList.remove('hidden');
+            input.value = '';
+            input.placeholder = placeholder;
+            setTimeout(() => input.focus(), 100); // Auto-focus
+        } else {
+            iCont.classList.add('hidden');
+        }
+
+        // Función para cerrar y resolver
+        const close = (val) => {
+            m.classList.add('hidden');
+            res(val);
+        };
+
+        // Botón Cancelar (si se requiere)
+// --- BOTÓN CANCELAR (Rojo que pasa a Gris con borde Rojo) ---
+if (showCancel || isPrompt) {
+    const bc = document.createElement('button');
+    // bg-red-600: Fondo inicial rojo
+    // hover:bg-gray-700: Cambia a gris al pasar el ratón
+    // hover:border-red-500 hover:border-2: Añade el borde rojo en hover
+    bc.className = 'px-4 py-2 rounded-lg bg-gray-600 text-white text-sm font-medium border-2 border-transparent hover:bg-red-700 hover:border-red-500 transition-all duration-300';
+    bc.textContent = 'Cancelar';
+    bc.onclick = () => close(isPrompt ? null : false);
+    ac.appendChild(bc);
+}
+
+// --- BOTÓN ACEPTAR (Azul que pasa a Rojo con borde Azul) ---
+const bp = document.createElement('button');
+// bg-blue-600: Fondo inicial azul
+// hover:bg-red-600: Cambia a rojo al pasar el ratón
+// hover:border-blue-400 hover:border-2: Añade el borde azul en hover
+bp.className = 'px-6 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium border-2 border-transparent hover:bg-blue-800 hover:border-blue-400 transition-all duration-300';
+bp.textContent = 'Aceptar';
+bp.onclick = () => {
+    if (isPrompt) {
+        close(input.value);
+    } else {
+        close(true);
     }
+};
+ac.appendChild(bp);
+
+        m.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+    });
+}
     function toggleTheme() {
         const isLight = document.documentElement.classList.toggle('light-mode');
         localStorage.setItem(KEYS.THEME, isLight ? 'light' : 'dark');
@@ -476,45 +557,50 @@ console.groupEnd();
         window.location.href = 'Datos2.html';
     }
 
-    function toggleRecordStatus(suffix = 'edit') {
-        // suffix puede ser 'edit' o 'view'
-        const input = document.getElementById(`input-typereg-${suffix}`);
-        const badge = document.getElementById(`badge-status-${suffix}`);
-        const iconToggle = document.getElementById(`toggle-icon-${suffix}`);
+function toggleRecordStatus(suffix = 'edit') {
+    const input = document.getElementById(`input-typereg-${suffix}`);
+    if (!input) return;
 
-        if (!input || !badge || !iconToggle) {
-            // Si no los encuentra con el sufijo, intenta sin el sufijo (por compatibilidad)
-            const fallbackInput = document.getElementById('input-typereg');
-            const fallbackBadge = document.getElementById('badge-status');
-            const fallbackIcon = document.getElementById('toggle-icon');
-            if (!fallbackInput) return;
-            
-            // Ejecutar lógica con fallback...
-            actualizarElementosStatus(fallbackInput, fallbackBadge, fallbackIcon);
-        } else {
-            actualizarElementosStatus(input, badge, iconToggle);
+    const nuevoEstado = (input.value === "Bloqueado") ? "Registrado" : "Bloqueado";
+    input.value = nuevoEstado;
+    
+    actualizarVisualizacionStatus(suffix, nuevoEstado);
+}
+
+async function actualizarVisualizacionStatus(suffix, estado) {
+    const badge = document.getElementById(`badge-status-${suffix}`);
+    const iconToggle = document.getElementById(`toggle-icon-${suffix}`);
+    const isBloqueado = (estado === "Bloqueado");
+
+    // 1. Lógica visual del Badge e Icono (Lo que ya funciona)
+    if (badge) {
+        badge.textContent = estado;
+        badge.className = `text-[10px] px-2 py-0.5 rounded-full uppercase font-bold transition-all ${
+            isBloqueado ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'
+        }`;
+    }
+
+    if (iconToggle) {
+        iconToggle.style.color = isBloqueado ? "#ef4444" : "#22c55e";
+        iconToggle.setAttribute('data-lucide', isBloqueado ? 'toggle-left' : 'toggle-right');
+    }
+
+    // 2. BLOQUEO DE CAMPOS Y MODAL
+    if (suffix === 'edit') {
+        toggleFormLock(isBloqueado); // Esta función bloquea los inputs (ver abajo)
+
+        // Solo lanzamos el modal si el usuario acaba de activar el bloqueo manualmente
+        if (isBloqueado) {
+            await showSystemModal({
+                title: 'Registro Bloqueado',
+                text: 'Formulario en modo solo lectura.',
+                type: 'info'
+            });
         }
     }
 
-    function actualizarElementosStatus(input, badge, iconToggle) {
-        const isNowBloqueado = input.value !== "Bloqueado";
-
-        if (isNowBloqueado) {
-            input.value = "Bloqueado";
-            badge.textContent = "Bloqueado";
-            badge.className = "text-[10px] px-2 py-0.5 rounded-full uppercase font-bold bg-red-500/20 text-red-400 border border-red-500/30 transition-all";
-            iconToggle.style.color = "#ef4444";
-            iconToggle.setAttribute('data-lucide', 'toggle-left');
-        } else {
-            input.value = "Registrado";
-            badge.textContent = "Registrado";
-            badge.className = "text-[10px] px-2 py-0.5 rounded-full uppercase font-bold bg-green-500/20 text-green-400 border border-green-500/30 transition-all";
-            iconToggle.style.color = "#22c55e";
-            iconToggle.setAttribute('data-lucide', 'toggle-right');
-        }
-
-        if (window.lucide) lucide.createIcons();
-    }
+    if (window.lucide) lucide.createIcons();
+}
 
     function toggleGastosType() {
         const input = document.getElementById('input-TD202DAT01');
@@ -544,6 +630,46 @@ console.groupEnd();
         
         if(window.lucide) lucide.createIcons();
     }
+
+function toggleFormLock(isLocked) {
+    const form = document.getElementById('editDataForm');
+    if (!form) return;
+
+    // 1. Seleccionamos solo inputs de datos, selects y textareas
+    // Excluimos explícitamente el input del status y cualquier botón
+    const inputs = form.querySelectorAll('input:not(#input-typereg-edit), select, textarea');
+    
+    inputs.forEach(el => {
+        if (isLocked) {
+            el.classList.add('opacity-40', 'cursor-not-allowed');
+            el.style.pointerEvents = 'none'; // Evita interacción física
+            el.readOnly = true; 
+            // Si es un select, hay que deshabilitarlo porque no tiene readOnly
+            if (el.tagName === 'SELECT') el.disabled = true;
+        } else {
+            el.classList.remove('opacity-40', 'cursor-not-allowed');
+            el.style.pointerEvents = 'auto';
+            el.readOnly = false;
+            if (el.tagName === 'SELECT') el.disabled = false;
+        }
+    });
+
+    // 2. EL AJUSTE CLAVE: El botón de Guardar
+    // Nos aseguramos de que NUNCA se bloquee, incluso si isLocked es true
+    const submitBtn = document.getElementById('submitBtn'); 
+    if (submitBtn) {
+        submitBtn.disabled = false; 
+        submitBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+        
+        // Opcional: Cambiarle el texto o color para indicar que enviará un bloqueo
+        if (isLocked) {
+            submitBtn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Guardar Bloqueo';
+        } else {
+            submitBtn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Guardar Cambios';
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+}
 
     function applyMask(input) {
         let value = input.value.replace(/\D/g, '');
@@ -623,22 +749,24 @@ console.groupEnd();
             const canEdit = field.editable !== false;
 
             // 1. LÓGICA DE ID (Mantiene tu exclusión original para TD101, TD102, TD201)
-            if (isTableID) {
-                if (isExcluded) {
-                    // Si es una tabla excluida, el ID va oculto y no renderiza fila visual
-                    return isNew ? '' : `<input type="hidden" name="${colId}" id="input-${cleanId}" value="${value}">`;
-                }
-                // Si NO es excluida, muestra el ID con el control de Status (Bloqueado/Registrado)
-                return `
-                    <div class="border-b border-gray-700/40 py-1">
-                        <span class="text-[10px] font-bold text-orange-400 uppercase block -mb-1">${field.label || 'ID Registro'}</span>
-                        <div class="flex items-center justify-between min-h-[32px]">
-                            <input type="text" name="${colId}" id="input-${cleanId}" value="${value}" readonly 
-                                class="text-[22px] text-blue-300 font-bold bg-transparent outline-none border-none focus:ring-0 p-0 m-0 w-full cursor-default">
-                            ${statusControlHtml}
-                        </div>
-                    </div>`;
-            }
+// En renderFields, simplificamos lo que pasa cuando es ID
+if (isTableID) {
+    if (isExcluded) {
+        return isNew ? '' : `<input type="hidden" name="${colId}" id="input-${cleanId}" value="${value}">`;
+    }
+    // Ya NO incluimos el toggle aquí, solo el ID y el Badge visual (opcional)
+    return `
+        <div class="border-b border-gray-700/40 py-1">
+            <span class="text-[10px] font-bold text-orange-400 uppercase block -mb-1">${field.label || 'ID Registro'}</span>
+            <div class="flex items-center justify-between min-h-[32px]">
+                <input type="text" name="${colId}" id="input-${cleanId}" value="${value}" readonly 
+                    class="text-[22px] text-blue-300 font-bold bg-transparent outline-none border-none focus:ring-0 p-0 m-0 w-full cursor-default">
+                <span id="badge-status-edit" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold transition-all">
+                    ${rawStatus}
+                </span>
+            </div>
+        </div>`;
+}
 
             // 2. LÓGICA ESPECIAL PARA GASTOS (TD202DAT01)
             if (cleanId === 'TD202DAT01') {
@@ -705,6 +833,24 @@ console.groupEnd();
 
         if (window.lucide) lucide.createIcons();
         if (typeof hydrateAllSelects === 'function') hydrateAllSelects(selectHydrations);
+
+        // Al final de renderFields, antes del return o cierre
+const inputH = document.getElementById('input-typereg-edit');
+if (inputH) {
+    inputH.name = `${prefix}TYPEREG`; // Le ponemos el nombre correcto (ej. TD101TYPEREG)
+    inputH.value = rawStatus; 
+    // Llamamos a la función de toggle pero sin cambiar el valor, solo para que pinte colores/iconos iniciales
+    actualizarVisualizacionStatus('edit', rawStatus);
+}   
+
+// Al final de tu función renderFields
+setTimeout(() => {
+    const statusInicial = document.getElementById('input-typereg-edit')?.value;
+    if (statusInicial === "Bloqueado") {
+        toggleFormLock(true);
+    }
+}, 100);
+
     }
 
     function renderProfile() {
@@ -920,80 +1066,79 @@ console.groupEnd();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    async function DeleteRecord() {
-        // 1. Recuperar datos y normalizar prefijos
-        const data = JSON.parse(localStorage.getItem('TABLE_DATA') || localStorage.getItem(STORAGE_DATA) || '{}');
-        const tableOrigin = data.TABLA_ORIGEN || "";
-        const prefix = tableOrigin.split('_')[0].toUpperCase();
-        
-        // Normalización de claves (Mayúsculas según el nuevo Backend)
-        const ownerKey = `${prefix}REGISTROUSER`;
-        const registroOwner = data[ownerKey] || data[`${prefix}RegistroUser`]; 
+async function DeleteRecord() {
+    // 1. Recuperar datos y normalizar prefijos (Tu lógica actual impecable)
+    const data = JSON.parse(localStorage.getItem('TABLE_DATA') || localStorage.getItem(STORAGE_DATA) || '{}');
+    const tableOrigin = data.TABLA_ORIGEN || "";
+    const prefix = tableOrigin.split('_')[0].toUpperCase();
+    
+    const ownerKey = `${prefix}REGISTROUSER`;
+    const registroOwner = data[ownerKey] || data[`${prefix}RegistroUser`]; 
 
-        const usuarioLogueado = localStorage.getItem(KEYS.USUARIO_ID);
-        const idxCorrecto = localStorage.getItem('Usuario_Idx');
+    const usuarioLogueado = localStorage.getItem(KEYS.USUARIO_ID);
+    const idxCorrecto = localStorage.getItem('Usuario_Idx');
 
-        const idLogueadoStr = String(usuarioLogueado || "").trim();
-        const idOwnerStr = String(registroOwner || "").trim();
+    const idLogueadoStr = String(usuarioLogueado || "").trim();
+    const idOwnerStr = String(registroOwner || "").trim();
 
-        // 2. Validación de Propietario
-        if (!idOwnerStr || idOwnerStr !== idLogueadoStr) {
-            await showSystemModal({ 
-                title: 'Acceso Denegado', 
-                text: 'Solo el propietario de este registro o un Administrador pueden eliminarlo.', 
-                type: 'warning' 
-            });
-            return;
-        }
-
-        // 3. Confirmación de Eliminación (Informar al usuario)
-        await showSystemModal({
-            title: 'Confirmar Eliminación',
-            text: 'Este registro será borrado permanentemente, sin posibilidad de recuperación.',
-            type: 'warning'
+    // 2. Validación de Propietario
+    if (!idOwnerStr || idOwnerStr !== idLogueadoStr) {
+        await showSystemModal({ 
+            title: 'Acceso Denegado', 
+            text: 'Solo el propietario de este registro o un Administrador pueden eliminarlo.', 
+            type: 'warning' 
         });
-
-        // 4. Solicitar Idx Seguridad
-        const pinIngresado = prompt("Ingrese su Idx de Seguridad para autorizar el borrado:");
-        
-        if (pinIngresado === null) return; // Si cancela el prompt, salimos
-
-        if (pinIngresado !== idxCorrecto) {
-            await showSystemModal({ 
-                title: 'Error de Seguridad', 
-                text: 'El Idx de Seguridad es incorrecto.', 
-                type: 'warning' 
-            });
-            return;
-        }
-
-        // 5. Preparar Payload para el Backend
-        const payload = {
-            action: "deleteDynamicDataTD",
-            TABLA_DESTINO: tableOrigin,
-            CAMPO_CLAVE: `${prefix}ID`,
-            [`${prefix}ID`]: data[`${prefix}ID`],
-            usuario_id: idLogueadoStr
-        };
-
-        try {
-            // 6. Ejecución del envío
-            // executeSubmit mostrará el modal de "Proceso Realizado"
-            await executeSubmit(payload, 'Proceso completado');
-
-            // 7. Redirección Automática
-            // Regresamos a la tabla principal una vez que el servidor confirma el éxito
-            window.location.href = 'Datos2.html';
-
-        } catch (error) {
-            console.error("Error al eliminar:", error);
-            await showSystemModal({ 
-                title: 'Error Crítico', 
-                text: 'No se pudo completar la operación en el servidor.', 
-                type: 'warning' 
-            });
-        }
+        return;
     }
+
+    // 3. Confirmación y Solicitud de Idx de Seguridad (Todo en un solo paso)
+    // Usamos el modo isPrompt para que el usuario escriba su clave en el modal
+    const pinIngresado = await showSystemModal({
+        title: 'Confirmar Eliminación',
+        text: 'Este registro será borrado permanentemente. Ingrese su Idx de Seguridad para autorizar:',
+        type: 'danger', // Usamos danger para resaltar el riesgo
+        isPrompt: true,
+        placeholder: 'Ingrese su Idx...'
+    });
+
+    // 4. Manejo de la respuesta del Modal
+    if (pinIngresado === null) return; // El usuario presionó "Cancelar" o cerró el modal
+
+    if (pinIngresado.trim() !== String(idxCorrecto).trim()) {
+        await showSystemModal({ 
+            title: 'Error de Seguridad', 
+            text: 'El Idx de Seguridad proporcionado es incorrecto. Operación abortada.', 
+            type: 'warning' 
+        });
+        return;
+    }
+
+    // 5. Preparar Payload para el Backend
+    const payload = {
+        action: "deleteDynamicDataTD",
+        TABLA_DESTINO: tableOrigin,
+        CAMPO_CLAVE: `${prefix}ID`,
+        [`${prefix}ID`]: data[`${prefix}ID`],
+        usuario_id: idLogueadoStr
+    };
+
+    try {
+        // 6. Ejecución del envío
+        // executeSubmit ya gestiona el modal de éxito internamente
+        await executeSubmit(payload, 'Registro eliminado correctamente');
+
+        // 7. Redirección Automática
+        window.location.href = 'Datos2.html';
+
+    } catch (error) {
+        console.error("Error al eliminar:", error);
+        await showSystemModal({ 
+            title: 'Error Crítico', 
+            text: 'No se pudo completar la operación en el servidor.', 
+            type: 'warning' 
+        });
+    }
+}
 
     function showRegisterMode() {
         const duplicateBtn = document.getElementById('btn-duplicate-record');
