@@ -55,7 +55,7 @@
         </header>
 
         <main id="main-content" class="relative"> 
-            <div id="global-loader" class="hidden absolute inset-x-10 top-1/4 h-fit z-[400] flex items-center justify-center ...">
+            <div id="global-loader" class="hidden absolute inset-x-20 top-1/4 h-fit z-[400] flex items-center justify-center ...">
                 <div class="flex flex-col items-center p-8 bg-gray-800/95 border border-blue-500/40 rounded-2xl shadow-2xl min-w-[320px] transform -translate-y-10">
                     <div class="relative mb-4">
                         <i data-lucide="loader-2" class="w-10 h-10 text-blue-400 animate-spin"></i>
@@ -67,23 +67,25 @@
                 </div>
             </div>
 
-            <div id="DetalleDataContent" class="p-6 bg-gray-800 rounded-xl border border-gray-700 shadow-2xl">
-                <div class="flex justify-between items-center border-b border-gray-700 pb-3 mb-4">
-                    <h3 id="viewTitle" class="text-2xl font-bold text-blue-400">Detalle Selección</h3>
-                    <div class="flex gap-4">
+            <div id="DetalleDataContent" class="p-4 bg-gray-800 rounded-xl border border-gray-700 shadow-2xl">
+                <div class="flex flex-col border-b-2 border-gray-600 pb-2 mb-2 gap-2">                    
+                    <div class="w-full text-left">
+                        <h3 id="viewTitle" class="text-[22px] font-bold text-blue-400 border-b-2 border-gray-600">Detalle Selección</h3>
+                    </div>
+                    <div class="flex flex-wrap gap-2 w-full justify-end items-center">                        
                         <button onclick="duplicateCurrentRecord()" class="text-gray-400 hover:scale-110 transition-transform" title="Duplicar como Nuevo">
                             <i data-lucide="copy-plus" class="w-6 h-6"></i>
-                        </button>
-                        <button onclick="DeleteRecord()" class="text-gray-400 hover:scale-110 transition-transform" title="Borrar Registro">
+                        </button>                        
+                        <button onclick="DeleteRecord()" class="text-gray-400 hover:scale-110 transition-transform pr-2" title="Borrar Registro">
                             <i data-lucide="trash-2" class="w-6 h-6"></i>
-                        </button>
-                        <i id="header-icon-fixed-view" data-lucide="lock" class="w-6 h-6 text-blue-400 hidden"></i>
+                        </button>                       
+                        <i id="header-icon-fixed-view" data-lucide="lock" class="w-6 h-6 text-blue-400 hidden"></i>                        
                         <button onclick="showRegisterMode()" class="text-green-400 hover:scale-110 transition-transform border-l-2 border-gray-600 pl-4" title="Nuevo Registro">
                             <i data-lucide="file-plus-2" class="w-6 h-6"></i>
-                        </button>
+                        </button>                        
                         <button onclick="showEditMode()" class="text-yellow-400 hover:scale-110 transition-transform" title="Editar Registro">
                             <i data-lucide="file-pen" class="w-6 h-6"></i>
-                        </button>
+                        </button>                       
                         <button onclick="closeFormAndReturn()" class="text-blue-400 hover:scale-110 transition-transform" title="Regresar a Datos">
                             <i data-lucide="circle-arrow-left" class="w-6 h-6"></i>
                         </button>
@@ -92,10 +94,12 @@
                 <div id="perfilBodyContent" class="space-y-1 pb-20"></div>
             </div>
 
-            <div id="EditDataContent" class="hidden p-6 bg-gray-800 rounded-xl border border-gray-700 shadow-2xl">
-                <div class="flex justify-between items-center border-b border-gray-700 pb-3 mb-4">                      
-                    <h2 id="formTitle" class="text-2xl font-bold text-white">Editar Selección</h2>
-                    <div class="flex items-center gap-4">  
+            <div id="EditDataContent" class="hidden p-4 bg-gray-800 rounded-xl border border-gray-700 shadow-2xl">
+                <div class="flex flex-col border-b-2 border-gray-600 pb-2 mb-2 gap-2"> 
+                    <div class="w-full text-left">
+                        <h2 id="formTitle" class="text-[22px] font-bold text-white border-b-2 border-gray-600">Editar Selección</h2>
+                    </div> 
+                    <div class="flex flex-wrap gap-2 w-full justify-end items-center">  
                         <button id="btn-duplicate-record" 
                                 onclick="duplicateCurrentRecord()" 
                                 class="text-blue-400 hover:scale-110 transition-transform hidden" 
@@ -472,32 +476,44 @@ console.groupEnd();
         window.location.href = 'Datos2.html';
     }
 
-    function toggleRecordStatus(prefix) {
-        const input = document.getElementById('input-typereg');
-        const badge = document.getElementById('badge-status');
-        const icon = document.getElementById('toggle-icon');        
-        if (!input || !badge || !icon) return;
-        const isNowBlocking = input.value !== "Bloqueado";
-        if (isNowBlocking) {
+    function toggleRecordStatus(suffix = 'edit') {
+        // suffix puede ser 'edit' o 'view'
+        const input = document.getElementById(`input-typereg-${suffix}`);
+        const badge = document.getElementById(`badge-status-${suffix}`);
+        const iconToggle = document.getElementById(`toggle-icon-${suffix}`);
+
+        if (!input || !badge || !iconToggle) {
+            // Si no los encuentra con el sufijo, intenta sin el sufijo (por compatibilidad)
+            const fallbackInput = document.getElementById('input-typereg');
+            const fallbackBadge = document.getElementById('badge-status');
+            const fallbackIcon = document.getElementById('toggle-icon');
+            if (!fallbackInput) return;
+            
+            // Ejecutar lógica con fallback...
+            actualizarElementosStatus(fallbackInput, fallbackBadge, fallbackIcon);
+        } else {
+            actualizarElementosStatus(input, badge, iconToggle);
+        }
+    }
+
+    function actualizarElementosStatus(input, badge, iconToggle) {
+        const isNowBloqueado = input.value !== "Bloqueado";
+
+        if (isNowBloqueado) {
             input.value = "Bloqueado";
             badge.textContent = "Bloqueado";
-            badge.className = "text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 uppercase font-bold transition-all";
-            icon.style.color = "#ef4444";
-            icon.setAttribute('data-lucide', 'toggle-right');
-            if (typeof showSystemModal === 'function') {
-                showSystemModal({ title: 'Registro Bloqueado', text: 'Se ha marcado como BLOQUEADO. Los cambios se aplicarán al guardar.', type: 'warning' });
-            }
+            badge.className = "text-[10px] px-2 py-0.5 rounded-full uppercase font-bold bg-red-500/20 text-red-400 border border-red-500/30 transition-all";
+            iconToggle.style.color = "#ef4444";
+            iconToggle.setAttribute('data-lucide', 'toggle-left');
         } else {
             input.value = "Registrado";
             badge.textContent = "Registrado";
-            badge.className = "text-[10px] px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30 uppercase font-bold transition-all";
-            icon.style.color = "#22c55e";
-            icon.setAttribute('data-lucide', 'toggle-left');
-            if (typeof showSystemModal === 'function') {
-                showSystemModal({ title: 'Registro Restaurado', text: 'El registro se ha marcado como REGISTRADO.', type: 'info' });
-            }
-        }           
-        if(window.lucide) lucide.createIcons();
+            badge.className = "text-[10px] px-2 py-0.5 rounded-full uppercase font-bold bg-green-500/20 text-green-400 border border-green-500/30 transition-all";
+            iconToggle.style.color = "#22c55e";
+            iconToggle.setAttribute('data-lucide', 'toggle-right');
+        }
+
+        if (window.lucide) lucide.createIcons();
     }
 
     function toggleGastosType() {
@@ -583,15 +599,15 @@ console.groupEnd();
 
         const rawStatus = data[`${prefix}TYPEREG`] || "Registrado";
         const isActuallyBlocked = rawStatus === "Bloqueado";
-        
+
         const statusControlHtml = `
             <div class="flex items-center gap-3">
-                <span id="badge-status" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold ${isActuallyBlocked ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}">
+                <span id="badge-status-edit" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold ${isActuallyBlocked ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}">
                     ${rawStatus}
                 </span>
-                <input type="hidden" name="${prefix}TYPEREG" id="input-typereg" value="${rawStatus}">
-                <button type="button" onclick="toggleRecordStatus('${prefix}')" class="focus:outline-none flex items-center">
-                    <i id="toggle-icon" data-lucide="${isActuallyBlocked ? 'toggle-left' : 'toggle-right'}" class="w-8 h-8" style="color: ${isActuallyBlocked ? '#ef4444' : '#22c55e'}"></i>
+                <input type="hidden" name="${prefix}TYPEREG" id="input-typereg-edit" value="${rawStatus}">
+                <button type="button" onclick="toggleRecordStatus('edit')" class="focus:outline-none flex items-center">
+                    <i id="toggle-icon-edit" data-lucide="${isActuallyBlocked ? 'toggle-left' : 'toggle-right'}" class="w-8 h-8" style="color: ${isActuallyBlocked ? '#ef4444' : '#22c55e'}"></i>
                 </button>
             </div>`;
 
@@ -618,7 +634,7 @@ console.groupEnd();
                         <span class="text-[10px] font-bold text-orange-400 uppercase block -mb-1">${field.label || 'ID Registro'}</span>
                         <div class="flex items-center justify-between min-h-[32px]">
                             <input type="text" name="${colId}" id="input-${cleanId}" value="${value}" readonly 
-                                class="bg-transparent outline-none border-none focus:ring-0 text-[22px] text-blue-300 font-bold p-0 m-0 w-full cursor-default">
+                                class="text-[22px] text-blue-300 font-bold bg-transparent outline-none border-none focus:ring-0 p-0 m-0 w-full cursor-default">
                             ${statusControlHtml}
                         </div>
                     </div>`;
@@ -654,7 +670,7 @@ console.groupEnd();
                     <div class="border-b border-gray-700/40 py-1">
                         <span class="text-[10px] font-bold text-blue-400 uppercase block -mb-1">${field.label}</span>
                         <div class="flex items-center h-[32px]">
-                            <select name="${colId}" id="${selectId}" class="w-full bg-transparent text-blue-300 outline-none text-[18px] font-bold p-0 appearance-none cursor-pointer scheme-dark">
+                            <select name="${colId}" id="${selectId}" class="text-[16px] text-gray-200 font-medium w-full bg-transparent text-blue-300 outline-none p-0 appearance-none cursor-pointer scheme-dark">
                                 <option value="${value}">${value || '-- Seleccionar --'}</option>
                             </select>
                         </div>
@@ -675,14 +691,14 @@ console.groupEnd();
             } else if (value && isRegistryData) {
                 displayValue = (typeof getFormattedValue === 'function') ? getFormattedValue(colId, value) : value;
             }
-
+//textos en modo EDIT
             return `
                 <div class="border-b border-gray-700/40 py-1">
-                    <span class="text-[10px] font-medium text-blue-400 uppercase block -mb-1">${field.label}</span>
+                    <span class="text-[10px] font-bold text-blue-400 uppercase block -mb-0.5">${field.label}</span>
                     <div class="flex items-center h-[32px]">
                         <input type="${inputType}" name="${colId}" id="input-${cleanId}" value="${displayValue}" 
                             ${(!canEdit) ? 'readonly' : ''} 
-                            class="w-full bg-transparent outline-none p-0 leading-tight focus:ring-0 text-gray-200 font-medium ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''} scheme-dark">
+                            class="text-[16px] text-gray-200 font-medium w-full bg-transparent outline-none p-0 leading-tight focus:ring-0 ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''} scheme-dark">
                     </div>
                 </div>`;
         }).join('');
@@ -706,29 +722,67 @@ console.groupEnd();
             duplicateBtn.style.display = 'block';
         }
 
+        // Definición de Status para el ID (Sincronizado con renderFields)
         const rawStatus = data[`${prefix}TYPEREG`] || "Registrado";
+        const isActuallyBlocked = rawStatus === "Bloqueado";
         const isBlocked = rawStatus.toUpperCase() === 'BLOQUEADO';
         const badgeHtml = `<span class="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 uppercase font-bold">Bloqueado</span>`;
 
+        // Dentro de renderProfile
+        const statusControlHtml = `
+            <div class="flex items-center gap-3">
+                <span id="badge-status" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold ${isActuallyBlocked ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}">
+                    ${rawStatus}
+                </span>
+                <input type="hidden" name="${prefix}TYPEREG" id="input-typereg" value="${rawStatus}">
+                <div class="w-8 h-8 flex items-center justify-center">
+                    <i data-lucide="${isActuallyBlocked ? 'lock' : 'check-circle'}" class="w-6 h-6 ${isActuallyBlocked ? 'text-red-400' : 'text-green-400'}"></i>
+                </div>
+            </div>`;
+
         container.innerHTML = Object.keys(config).map(colId => {
+            const field = config[colId];
             const cleanId = colId.toUpperCase().trim();
+            const value = (data && data[colId] !== undefined) ? data[colId] : '';
+            
             const isTableID = cleanId === `${prefix}ID`;
             const isIdNombre = cleanId === `${prefix}IDNOMBRE`;
             const isExcluded = excludedIDTables.includes(prefix);
+            const isNew = false; // Profile siempre asume registro existente
 
+            // Exclusiones técnicas
             if (cleanId.endsWith('TYPEREG') || cleanId.includes('REGISTRO')) return '';
-            if (isTableID && isExcluded) return '';
 
-            const formattedValue = typeof getFormattedValue === 'function' ? getFormattedValue(colId, data[colId]) : data[colId];
+            // 1. LÓGICA DE ID (REESTRUCTURADA)
+            if (isTableID) {
+                if (isExcluded) {
+                    // Si es tabla excluida, va oculto (input hidden) sin fila visual
+                    return isNew ? '' : `<input type="hidden" name="${colId}" id="input-${cleanId}" value="${value}">`;
+                }
+
+                // Si NO es excluida, muestra el ID con el control de Status
+                return `
+                    <div class="border-b border-gray-700/40 py-1">
+                        <span class="text-[10px] font-bold text-orange-400 uppercase block -mb-1">${field.label || 'ID Registro'}</span>
+                        <div class="flex items-center justify-between min-h-[32px]">
+                            <input type="text" name="${colId}" id="input-${cleanId}" value="${value}" readonly 
+                                class="text-[22px] text-blue-300 font-bold bg-transparent outline-none border-none focus:ring-0 p-0 m-0 w-full cursor-default">
+                            ${statusControlHtml}
+                        </div>
+                    </div>`;
+            }
+
+            // 2. FORMATEO Y LÓGICA DE CAMPOS REGULARES
+            const formattedValue = typeof getFormattedValue === 'function' ? getFormattedValue(colId, value) : value;
             let shouldShowBadge = isBlocked && ((isTableID && !isExcluded) || (isIdNombre && isExcluded));
             const isHighPriority = cleanId.includes('NOMBREC') || cleanId.includes('DAT01') || isIdNombre || isTableID;
 
-            // --- INICIO AJUSTE PARA GASTOS EN MODO VISTA ---
+            // 3. CASO ESPECIAL GASTOS
             if (cleanId === 'TD202DAT01') {
-                const isFijo = String(data[colId]).trim() === "Fijo";
+                const isFijo = String(value).trim() === "Fijo";
                 return `
                     <div class="border-b border-gray-700/40 py-1"> 
-                        <span class="text-[10px] font-bold text-blue-400/60 uppercase block -mb-0.5">${config[colId].label}</span>
+                        <span class="text-[10px] font-bold text-blue-400/60 uppercase block -mb-0.5">${field.label}</span>
                         <div class="flex items-center h-[32px]">
                             <span class="text-[22px] text-blue-300 font-bold leading-tight">
                                 ${formattedValue || '---'}
@@ -739,13 +793,20 @@ console.groupEnd();
                         </div>
                     </div>`;
             }
-            // --- FIN AJUSTE ---
+//textos en modo VIEW
+            let textClass = 'text-[16px] text-gray-200 font-medium'; // Clase base
+
+            if (isTableID) { textClass = 'text-[22px] text-red-300 font-medium';
+            } else if (isHighPriority) {textClass = 'text-[16px] text-red-300 font-medium';
+            }
 
             return `
                 <div class="border-b border-gray-700/40 py-1"> 
-                    <span class="text-[10px] font-bold ${isTableID ? 'text-orange-400/80' : 'text-blue-400/60'} uppercase block -mb-0.5">${config[colId].label}</span>
+                    <span class="text-[10px] font-bold ${isTableID ? 'text-orange-400/80' : 'text-blue-400/60'} uppercase block -mb-0.5">
+                        ${field.label}
+                    </span>
                     <div class="flex items-center h-[32px]">
-                        <span class="${isHighPriority ? 'text-[22px] text-blue-300 font-bold' : 'text-[16px] text-gray-200 font-medium'} leading-tight">
+                        <span class="${textClass} leading-tight">
                             ${formattedValue || '---'}
                         </span>
                         ${shouldShowBadge ? badgeHtml : ''}
@@ -800,12 +861,18 @@ console.groupEnd();
         e.preventDefault();
         const currentData = JSON.parse(localStorage.getItem(STORAGE_DATA) || '{}');
         const prefix = currentData.TABLA_ORIGEN.split('_')[0].toUpperCase();
+        
+        // Buscamos el valor del input con el nuevo ID corregido
+        const statusValue = document.getElementById('input-typereg-edit')?.value || 
+                            document.getElementById('input-typereg')?.value || 
+                            currentData[`${prefix}TYPEREG`];
+
         const payload = {
             action: "editDynamicDataTD",
             TABLA_DESTINO: currentData.TABLA_ORIGEN,
             CAMPO_CLAVE: `${prefix}ID`,
             ...sanitizePayload(new FormData(e.target)),
-            [`${prefix}TYPEREG`]: document.getElementById('input-typereg')?.value || currentData[`${prefix}TYPEREG`],
+            [`${prefix}TYPEREG`]: statusValue,
             [`${prefix}RegistroUser`]: localStorage.getItem(KEYS.USUARIO_ID) || "User"
         };
         await executeSubmit(payload, 'Registro Actualizado');
@@ -853,80 +920,80 @@ console.groupEnd();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-async function DeleteRecord() {
-    // 1. Recuperar datos y normalizar prefijos
-    const data = JSON.parse(localStorage.getItem('TABLE_DATA') || localStorage.getItem(STORAGE_DATA) || '{}');
-    const tableOrigin = data.TABLA_ORIGEN || "";
-    const prefix = tableOrigin.split('_')[0].toUpperCase();
-    
-    // Normalización de claves (Mayúsculas según el nuevo Backend)
-    const ownerKey = `${prefix}REGISTROUSER`;
-    const registroOwner = data[ownerKey] || data[`${prefix}RegistroUser`]; 
+    async function DeleteRecord() {
+        // 1. Recuperar datos y normalizar prefijos
+        const data = JSON.parse(localStorage.getItem('TABLE_DATA') || localStorage.getItem(STORAGE_DATA) || '{}');
+        const tableOrigin = data.TABLA_ORIGEN || "";
+        const prefix = tableOrigin.split('_')[0].toUpperCase();
+        
+        // Normalización de claves (Mayúsculas según el nuevo Backend)
+        const ownerKey = `${prefix}REGISTROUSER`;
+        const registroOwner = data[ownerKey] || data[`${prefix}RegistroUser`]; 
 
-    const usuarioLogueado = localStorage.getItem(KEYS.USUARIO_ID);
-    const idxCorrecto = localStorage.getItem('Usuario_Idx');
+        const usuarioLogueado = localStorage.getItem(KEYS.USUARIO_ID);
+        const idxCorrecto = localStorage.getItem('Usuario_Idx');
 
-    const idLogueadoStr = String(usuarioLogueado || "").trim();
-    const idOwnerStr = String(registroOwner || "").trim();
+        const idLogueadoStr = String(usuarioLogueado || "").trim();
+        const idOwnerStr = String(registroOwner || "").trim();
 
-    // 2. Validación de Propietario
-    if (!idOwnerStr || idOwnerStr !== idLogueadoStr) {
-        await showSystemModal({ 
-            title: 'Acceso Denegado', 
-            text: 'Solo el propietario de este registro o un Administrador pueden eliminarlo.', 
-            type: 'warning' 
+        // 2. Validación de Propietario
+        if (!idOwnerStr || idOwnerStr !== idLogueadoStr) {
+            await showSystemModal({ 
+                title: 'Acceso Denegado', 
+                text: 'Solo el propietario de este registro o un Administrador pueden eliminarlo.', 
+                type: 'warning' 
+            });
+            return;
+        }
+
+        // 3. Confirmación de Eliminación (Informar al usuario)
+        await showSystemModal({
+            title: 'Confirmar Eliminación',
+            text: 'Este registro será borrado permanentemente, sin posibilidad de recuperación.',
+            type: 'warning'
         });
-        return;
+
+        // 4. Solicitar Idx Seguridad
+        const pinIngresado = prompt("Ingrese su Idx de Seguridad para autorizar el borrado:");
+        
+        if (pinIngresado === null) return; // Si cancela el prompt, salimos
+
+        if (pinIngresado !== idxCorrecto) {
+            await showSystemModal({ 
+                title: 'Error de Seguridad', 
+                text: 'El Idx de Seguridad es incorrecto.', 
+                type: 'warning' 
+            });
+            return;
+        }
+
+        // 5. Preparar Payload para el Backend
+        const payload = {
+            action: "deleteDynamicDataTD",
+            TABLA_DESTINO: tableOrigin,
+            CAMPO_CLAVE: `${prefix}ID`,
+            [`${prefix}ID`]: data[`${prefix}ID`],
+            usuario_id: idLogueadoStr
+        };
+
+        try {
+            // 6. Ejecución del envío
+            // executeSubmit mostrará el modal de "Proceso Realizado"
+            await executeSubmit(payload, 'Proceso completado');
+
+            // 7. Redirección Automática
+            // Regresamos a la tabla principal una vez que el servidor confirma el éxito
+            window.location.href = 'Datos2.html';
+
+        } catch (error) {
+            console.error("Error al eliminar:", error);
+            await showSystemModal({ 
+                title: 'Error Crítico', 
+                text: 'No se pudo completar la operación en el servidor.', 
+                type: 'warning' 
+            });
+        }
     }
-
-    // 3. Confirmación de Eliminación (Informar al usuario)
-    await showSystemModal({
-        title: 'Confirmar Eliminación',
-        text: 'Este registro será borrado permanentemente, sin posibilidad de recuperación.',
-        type: 'warning'
-    });
-
-    // 4. Solicitar Idx Seguridad
-    const pinIngresado = prompt("Ingrese su Idx de Seguridad para autorizar el borrado:");
-    
-    if (pinIngresado === null) return; // Si cancela el prompt, salimos
-
-    if (pinIngresado !== idxCorrecto) {
-        await showSystemModal({ 
-            title: 'Error de Seguridad', 
-            text: 'El Idx de Seguridad es incorrecto.', 
-            type: 'warning' 
-        });
-        return;
-    }
-
-    // 5. Preparar Payload para el Backend
-    const payload = {
-        action: "deleteDynamicDataTD",
-        TABLA_DESTINO: tableOrigin,
-        CAMPO_CLAVE: `${prefix}ID`,
-        [`${prefix}ID`]: data[`${prefix}ID`],
-        usuario_id: idLogueadoStr
-    };
-
-    try {
-        // 6. Ejecución del envío
-        // executeSubmit mostrará el modal de "Proceso Realizado"
-        await executeSubmit(payload, 'Proceso completado');
-
-        // 7. Redirección Automática
-        // Regresamos a la tabla principal una vez que el servidor confirma el éxito
-        window.location.href = 'Datos2.html';
-
-    } catch (error) {
-        console.error("Error al eliminar:", error);
-        await showSystemModal({ 
-            title: 'Error Crítico', 
-            text: 'No se pudo completar la operación en el servidor.', 
-            type: 'warning' 
-        });
-    }
-}
 
     function showRegisterMode() {
         const duplicateBtn = document.getElementById('btn-duplicate-record');
@@ -945,7 +1012,7 @@ async function DeleteRecord() {
     function showEditMode() {
         const config = JSON.parse(localStorage.getItem(STORAGE_CONFIG));
         const data = JSON.parse(localStorage.getItem(STORAGE_DATA));
-        document.getElementById('formTitle').textContent = `Editar Selección: ${getFriendlyTableName(data.TABLA_ORIGEN)}`;
+        document.getElementById('formTitle').textContent = `Editar: ${getFriendlyTableName(data.TABLA_ORIGEN)}`;
         document.getElementById('formAction').value = "editDynamicDataTD";
         document.getElementById('submitBtn').textContent = "Guardar Cambios";           
         renderFields(config, data, false);
