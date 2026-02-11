@@ -86,7 +86,7 @@
                         <button onclick="showEditMode()" class="text-yellow-400 hover:scale-110 transition-transform" title="Editar Registro">
                             <i data-lucide="file-pen" class="w-6 h-6"></i>
                         </button>                       
-                        <button onclick="closeFormAndReturn()" class="text-blue-400 hover:scale-110 transition-transform" title="Regresar a Datos">
+                        <button onclick="closeFormAndReturn()" class="text-blue-400 hover:scale-110 transition-transform pr-4" title="Regresar a Datos">
                             <i data-lucide="circle-arrow-left" class="w-6 h-6"></i>
                         </button>
                     </div>
@@ -114,7 +114,7 @@
                                 title="Duplicar como Nuevo">
                             <i data-lucide="copy-plus" class="w-6 h-6"></i>
                         </button>
-                        <button onclick="showViewMode()" class="text-red-400 hover:scale-110 transition-transform border-l-2 border-gray-600 pl-4">
+                        <button onclick="showViewMode()" class="text-red-400 hover:scale-110 transition-transform border-l-2 border-gray-600 pl-4 pr-4">
                             <i data-lucide="circle-x" class="w-6 h-6"></i>
                         </button>
                     </div>
@@ -528,19 +528,25 @@ console.groupEnd();
         }
     });
 
-    function showViewMode() {
-        const data = JSON.parse(localStorage.getItem('TABLE_DATA') || '{}');
-        if (data.IS_NEW === true) {
-            window.location.href = 'Datos2.html';
-            return;
-        }
-        const detailPanel = document.getElementById('DetalleDataContent');
-        const editPanel = document.getElementById('EditDataContent');           
-        if (detailPanel && editPanel) {
-            detailPanel.classList.remove('hidden');
-            editPanel.classList.add('hidden');
-        }
+function showViewMode() {
+    const data = JSON.parse(localStorage.getItem('TABLE_DATA') || '{}');
+    if (data.IS_NEW === true) {
+        window.location.href = 'Datos2.html';
+        return;
     }
+
+    // --- REPARACIÓN AQUÍ ---
+    // Restauramos la acción por defecto para que renderFields no vea "register" la próxima vez
+    const actionInput = document.getElementById('formAction');
+    if (actionInput) actionInput.value = "updateDynamicDataTD";
+
+    const detailPanel = document.getElementById('DetalleDataContent');
+    const editPanel = document.getElementById('EditDataContent');           
+    if (detailPanel && editPanel) {
+        detailPanel.classList.remove('hidden');
+        editPanel.classList.add('hidden');
+    }
+}
 
     function closeFormAndReturn() {
         try {
@@ -670,6 +676,11 @@ console.groupEnd();
             }
             if (window.lucide) lucide.createIcons();
         }
+
+        const btnGasto = document.querySelector('button[onclick="toggleGastosType()"]');
+        if (btnGasto) {
+            btnGasto.style.display = isLocked ? 'none' : 'flex';
+        }        
     }
 
     function applyMask(input) {
@@ -746,22 +757,32 @@ console.groupEnd();
             const canEdit = field.editable !== false;
 
             // --- 2. LÓGICA DE ID ---
-            if (isTableID) {
-                if (isExcluded) {
-                    return isNew ? '' : `<input type="hidden" name="${colId}" id="input-${cleanId}" value="${value}">`;
+const isInsertAction = document.getElementById('formAction')?.value === "registerDynamicDataTD";
+
+if (isTableID) {
+    if (isExcluded) {
+        return isNew ? '' : `<input type="hidden" name="${colId}" id="input-${cleanId}" value="${value}">`;
+    }
+    
+    // Si la acción es insertar (duplicado/nuevo), forzamos asteriscos SIEMPRE
+    const displayId = (isInsertAction || isNew) ? "*******" : value;
+    const isPlaceholderId = displayId === "*******";
+
+    return `
+        <div class="border-b border-gray-700/40 py-1">
+            <span class="text-[10px] font-bold text-orange-400 uppercase block -mb-1">${field.label || 'ID Registro'}</span>
+            <div class="flex items-center justify-between min-h-[32px]">
+                <input type="text" name="${colId}" id="input-${cleanId}" value="${displayId}" 
+                    readonly 
+                    class="text-[22px] ${isPlaceholderId ? 'text-orange-500/60' : 'text-blue-300'} font-bold bg-transparent outline-none border-none p-0 m-0 w-full cursor-default">
+                
+                ${isPlaceholderId 
+                    ? '<span class="text-[10px] text-orange-500/80 italic font-bold uppercase whitespace-nowrap tracking-tighter pr-12">Por asignar (Auto)</span>'
+                    : `<span id="badge-status-edit" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold whitespace-nowrap">${rawStatus}</span>`
                 }
-                return `
-                    <div class="border-b border-gray-700/40 py-1">
-                        <span class="text-[10px] font-bold text-orange-400 uppercase block -mb-1">${field.label || 'ID Registro'}</span>
-                        <div class="flex items-center justify-between min-h-[32px]">
-                            <input type="text" name="${colId}" id="input-${cleanId}" value="${value}" readonly 
-                                class="text-[22px] text-blue-300 font-bold bg-transparent outline-none border-none focus:ring-0 p-0 m-0 w-full cursor-default">
-                            <span id="badge-status-edit" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold transition-all">
-                                ${rawStatus}
-                            </span>
-                        </div>
-                    </div>`;
-            }
+            </div>
+        </div>`;
+}
 
             // --- 3. LÓGICA ESPECIAL PARA GASTOS (TD202DAT01) ---
             if (cleanId === 'TD202DAT01') {
@@ -821,7 +842,7 @@ console.groupEnd();
                     <div class="flex items-center h-[32px]">
                         <input type="${inputType}" name="${colId}" id="input-${cleanId}" value="${displayValue}" 
                             ${fieldIsReadOnly ? 'readonly' : ''} 
-                            class="text-[16px] text-gray-200 font-medium w-full bg-transparent outline-none p-0 leading-tight focus:ring-0 ${fieldIsReadOnly ? 'opacity-70 cursor-default' : ''} scheme-dark">
+                            class="text-[16px] text-gray-200 font-medium w-full bg-transparent outline-none p-0 pr-[24px] leading-tight focus:ring-0 ${fieldIsReadOnly ? 'opacity-70 cursor-default' : ''} scheme-dark">
                     </div>
                 </div>`;
         }).join('');
@@ -1048,33 +1069,76 @@ console.groupEnd();
         await executeSubmit(payload, 'Nuevo Registro Creado');
     }
 
-    function duplicateCurrentRecord() {
-        showEditMode();
-        const data = JSON.parse(localStorage.getItem(STORAGE_DATA) || '{}');
-        const prefix = (data.TABLA_ORIGEN || "").split('_')[0].toUpperCase();
+function duplicateCurrentRecord() {
+    console.log("Iniciando duplicado...");
 
-        document.getElementById('formAction').value = "registerDynamicDataTD";
-        document.getElementById('editDataForm').onsubmit = handleInsertSubmit; 
-        document.getElementById('formTitle').textContent = "Nuevo Registro (duplicado)";
-        document.getElementById('submitBtn').innerHTML = `<span>Confirmar y Crear Copia</span><i data-lucide="plus-circle" class="w-5 h-5"></i>`;
+    // 1. Forzar visibilidad del panel de edición (por si acaso)
+    if (typeof showEditMode === 'function') showEditMode();
 
-        const idInput = document.querySelector(`input[name="${prefix}ID"]`);
-        if (idInput) idInput.value = "*******"; 
-        const allInputs = document.querySelectorAll('#editDataForm input');
+    // 2. Cambiar la acción ANTES de renderizar
+    const actionInput = document.getElementById('formAction');
+    if (actionInput) {
+        actionInput.value = "registerDynamicDataTD";
+        console.log("Acción cambiada a:", actionInput.value);
+    }
+    
+    // 3. Recuperar datos (Usando las mismas llaves que tienes en el DOMContentLoaded)
+    // Nota: Si STORAGE_DATA y STORAGE_CONFIG son constantes, asegúrate que sean accesibles.
+    // Si fallan, intentamos con los strings directos.
+    const rawData = localStorage.getItem('TABLE_DATA'); 
+    const rawConfig = localStorage.getItem('TABLE_CONFIG'); 
+
+    if (!rawData || !rawConfig) {
+        console.error("Faltan datos en localStorage:", { rawData: !!rawData, rawConfig: !!rawConfig });
+        return;
+    }
+
+    const data = JSON.parse(rawData);
+    const config = JSON.parse(rawConfig);
+    const prefix = (data.TABLA_ORIGEN || "").split('_')[0].toUpperCase();
+
+    console.log("Datos recuperados. Prefijo detectado:", prefix);
+
+    // 4. UI: Título y Botón
+    document.getElementById('formTitle').textContent = "Nuevo Registro (duplicado)";
+    const submitBtn = document.getElementById('submitBtn');
+    if (submitBtn) {
+        submitBtn.innerHTML = `<span>Confirmar y Crear Copia</span><i data-lucide="plus-circle" class="w-5 h-5"></i>`;
+        submitBtn.onsubmit = handleInsertSubmit; // Vinculamos al insert
+    }
+    
+    // Vinculamos el formulario al handle de inserción
+    const form = document.getElementById('editDataForm');
+    if (form) form.onsubmit = handleInsertSubmit;
+
+    // 5. RE-RENDERIZAR (Esto activará tus asteriscos en renderFields)
+    console.log("Llamando a renderFields con config y data...");
+    renderFields(config, data, false); 
+
+    // 6. Limpieza de campos clave
+    setTimeout(() => {
+        console.log("Iniciando limpieza de campos clave...");
+        const allInputs = document.querySelectorAll('#editDataFormFields input');
         allInputs.forEach(input => {
             const name = input.name.toUpperCase();
-            const isKeyField = name === `${prefix}IDNOMBRE` || name === `${prefix}FECHA` ||  name.includes('MONTO') || name.includes('CANTIDAD') || name.includes('TOTAL') || name.includes('TASA') || name === 'TD101DAT01';
+            if (name === `${prefix}ID`) return; 
+
+            const isKeyField = name === `${prefix}IDNOMBRE` || name === `${prefix}FECHA` || 
+                               name.includes('MONTO') || name.includes('CANTIDAD') || 
+                               name.includes('TOTAL') || name.includes('TASA');
+            
             if (isKeyField) {
-                if (input.value && input.value !== "0,00") {input.placeholder = input.value;
-                }
+                input.placeholder = input.value || "";
                 input.value = ""; 
-                input.classList.add('italic', 'text-[16px]', 'text-red-300', 'font-medium');
+                input.classList.add('italic', 'text-red-300');
             }
         });
-
         if (window.lucide) lucide.createIcons();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+        console.log("Proceso de duplicado finalizado.");
+    }, 100);
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
     async function DeleteRecord() {
         // 1. Recuperar datos y normalizar prefijos (Tu lógica actual impecable)
