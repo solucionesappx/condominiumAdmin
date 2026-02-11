@@ -55,7 +55,7 @@
         </header>
 
         <main id="main-content" class="relative"> 
-            <div id="global-loader" class="hidden absolute inset-x-20 top-1/4 h-fit z-[400] flex items-center justify-center ...">
+            <div id="global-loader" class="hidden absolute inset-x-30 top-1/4 h-fit z-[400] flex items-center justify-center ...">
                 <div class="flex flex-col items-center p-8 bg-gray-800/95 border border-blue-500/40 rounded-2xl shadow-2xl min-w-[320px] transform -translate-y-10">
                     <div class="relative mb-4">
                         <i data-lucide="loader-2" class="w-10 h-10 text-blue-400 animate-spin"></i>
@@ -557,22 +557,32 @@ console.groupEnd();
         window.location.href = 'Datos2.html';
     }
 
-function toggleRecordStatus(suffix = 'edit') {
+async function toggleRecordStatus(suffix = 'edit') {
     const input = document.getElementById(`input-typereg-${suffix}`);
     if (!input) return;
 
     const nuevoEstado = (input.value === "Bloqueado") ? "Registrado" : "Bloqueado";
     input.value = nuevoEstado;
     
+    // Llamamos a la visualización
     actualizarVisualizacionStatus(suffix, nuevoEstado);
+
+    // SOLO lanzamos el modal si el cambio fue manual y el estado es Bloqueado
+    if (nuevoEstado === "Bloqueado" && suffix === 'edit') {
+        await showSystemModal({
+            title: 'Registro Bloqueado',
+            text: 'El formulario se ha puesto en modo de solo lectura.',
+            type: 'info'
+        });
+    }
 }
 
-async function actualizarVisualizacionStatus(suffix, estado) {
+function actualizarVisualizacionStatus(suffix, estado) {
     const badge = document.getElementById(`badge-status-${suffix}`);
     const iconToggle = document.getElementById(`toggle-icon-${suffix}`);
     const isBloqueado = (estado === "Bloqueado");
 
-    // 1. Lógica visual del Badge e Icono (Lo que ya funciona)
+    // 1. Actualizar Badge (si existe)
     if (badge) {
         badge.textContent = estado;
         badge.className = `text-[10px] px-2 py-0.5 rounded-full uppercase font-bold transition-all ${
@@ -580,23 +590,15 @@ async function actualizarVisualizacionStatus(suffix, estado) {
         }`;
     }
 
+    // 2. Actualizar Iconos del Toggle
     if (iconToggle) {
         iconToggle.style.color = isBloqueado ? "#ef4444" : "#22c55e";
         iconToggle.setAttribute('data-lucide', isBloqueado ? 'toggle-left' : 'toggle-right');
     }
 
-    // 2. BLOQUEO DE CAMPOS Y MODAL
+    // 3. Bloquear/Desbloquear campos
     if (suffix === 'edit') {
-        toggleFormLock(isBloqueado); // Esta función bloquea los inputs (ver abajo)
-
-        // Solo lanzamos el modal si el usuario acaba de activar el bloqueo manualmente
-        if (isBloqueado) {
-            await showSystemModal({
-                title: 'Registro Bloqueado',
-                text: 'Formulario en modo solo lectura.',
-                type: 'info'
-            });
-        }
+        toggleFormLock(isBloqueado);
     }
 
     if (window.lucide) lucide.createIcons();
@@ -710,149 +712,150 @@ function toggleFormLock(isLocked) {
         return entries;
     }
 
-    function renderFields(config, data, isNew = false) {
-        const container = document.getElementById('editDataFormFields');
-        const prefix = (data.TABLA_ORIGEN || "").split('_')[0].toUpperCase();
-        const tv001 = JSON.parse(localStorage.getItem('FULL_DATA_TV001') || '[]');
-        const selectHydrations = [];
-        const excludedIDTables = ['TD101', 'TD102', 'TD201']; // Se mantiene tu lista original
+function renderFields(config, data, isNew = false) {
+    const container = document.getElementById('editDataFormFields');
+    const tableOrigin = data.TABLA_ORIGEN || "";
+    const prefix = tableOrigin.split('_')[0].toUpperCase();
+    const tv001 = JSON.parse(localStorage.getItem('FULL_DATA_TV001') || '[]');
+    const selectHydrations = [];
+    const excludedIDTables = ['TD101', 'TD102', 'TD201']; 
+
+    // Ocultar botón duplicar en modo edición estándar
+    const duplicateBtn = document.getElementById('btn-duplicate-record');
+    if (duplicateBtn) {
+        duplicateBtn.classList.add('hidden');
+        duplicateBtn.style.display = 'none';
+    }
+
+    const rawStatus = data[`${prefix}TYPEREG`] || "Registrado";
+
+    // Mapeo y generación de campos
+    container.innerHTML = Object.keys(config).map(colId => {
+        const field = config[colId];
+        const cleanId = colId.toUpperCase().trim();
+        let value = (data && data[colId] !== undefined) ? data[colId] : '';          
         
-        const duplicateBtn = document.getElementById('btn-duplicate-record');
-        if (duplicateBtn) {
-            duplicateBtn.classList.add('hidden');
-            duplicateBtn.style.display = 'none';
+        // --- 1. EXCLUSIONES CRÍTICAS (Auditoría y Status) ---
+        // Excluimos TYPEREG y REGISTRO porque ya están en el Header o son internos
+        if (cleanId.endsWith('TYPEREG') || cleanId.includes('REGISTRO')) {
+            return ''; 
         }
 
-        const rawStatus = data[`${prefix}TYPEREG`] || "Registrado";
-        const isActuallyBlocked = rawStatus === "Bloqueado";
+        const isTableID = cleanId === `${prefix}ID`;
+        const isExcluded = excludedIDTables.includes(prefix);
+        const isDateOnly = cleanId.includes('FECHA');
+        const canEdit = field.editable !== false;
 
-        const statusControlHtml = `
-            <div class="flex items-center gap-3">
-                <span id="badge-status-edit" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold ${isActuallyBlocked ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}">
-                    ${rawStatus}
-                </span>
-                <input type="hidden" name="${prefix}TYPEREG" id="input-typereg-edit" value="${rawStatus}">
-                <button type="button" onclick="toggleRecordStatus('edit')" class="focus:outline-none flex items-center">
-                    <i id="toggle-icon-edit" data-lucide="${isActuallyBlocked ? 'toggle-left' : 'toggle-right'}" class="w-8 h-8" style="color: ${isActuallyBlocked ? '#ef4444' : '#22c55e'}"></i>
-                </button>
-            </div>`;
-
-        container.innerHTML = Object.keys(config).map(colId => {
-            const field = config[colId];
-            const cleanId = colId.toUpperCase().trim();
-            let value = (data && data[colId] !== undefined) ? data[colId] : '';          
-            
-            const isTableID = cleanId === `${prefix}ID`;
-            const isExcluded = excludedIDTables.includes(prefix);
-            const isDateOnly = cleanId.includes('FECHA');
-            const isRegistryData = cleanId.includes('REGISTRODATA');
-            const canEdit = field.editable !== false;
-
-            // 1. LÓGICA DE ID (Mantiene tu exclusión original para TD101, TD102, TD201)
-// En renderFields, simplificamos lo que pasa cuando es ID
-if (isTableID) {
-    if (isExcluded) {
-        return isNew ? '' : `<input type="hidden" name="${colId}" id="input-${cleanId}" value="${value}">`;
-    }
-    // Ya NO incluimos el toggle aquí, solo el ID y el Badge visual (opcional)
-    return `
-        <div class="border-b border-gray-700/40 py-1">
-            <span class="text-[10px] font-bold text-orange-400 uppercase block -mb-1">${field.label || 'ID Registro'}</span>
-            <div class="flex items-center justify-between min-h-[32px]">
-                <input type="text" name="${colId}" id="input-${cleanId}" value="${value}" readonly 
-                    class="text-[22px] text-blue-300 font-bold bg-transparent outline-none border-none focus:ring-0 p-0 m-0 w-full cursor-default">
-                <span id="badge-status-edit" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold transition-all">
-                    ${rawStatus}
-                </span>
-            </div>
-        </div>`;
-}
-
-            // 2. LÓGICA ESPECIAL PARA GASTOS (TD202DAT01)
-            if (cleanId === 'TD202DAT01') {
-                const isFijo = value === "Fijo";
-                return `
-                    <div class="border-b border-gray-700/40 py-1">
-                        <div class="flex items-center justify-between -mb-1">
-                            <span class="text-[10px] font-bold text-blue-400 uppercase">${field.label}</span>
-                        </div>
-                        <div class="flex items-center justify-between h-[32px]">
-                            <input type="text" name="${colId}" id="input-TD202DAT01" value="${value}" readonly 
-                                class="bg-transparent outline-none border-none focus:ring-0 text-[18px] text-gray-200 font-bold p-0 m-0 w-full cursor-default">
-                            <div id="badge-gasto-type" class="flex items-center justify-center p-1 rounded-full ${isFijo ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-purple-500/20 text-purple-400 border border-purple-500/30'}">
-                                <i data-lucide="${isFijo ? 'lock' : 'calendar-clock'}" class="w-6 h-6"></i>
-                            </div>
-                            <button type="button" onclick="toggleGastosType()" class="ml-4 focus:outline-none flex items-center">
-                                <i id="icon-gasto-type" data-lucide="${isFijo ? 'toggle-right' : 'toggle-left'}" class="w-8 h-8" style="color: ${isFijo ? '#3b82f6' : '#a855f7'}"></i>
-                            </button>
-                        </div>
-                    </div>`;
+        // --- 2. LÓGICA DE ID ---
+        if (isTableID) {
+            if (isExcluded) {
+                return isNew ? '' : `<input type="hidden" name="${colId}" id="input-${cleanId}" value="${value}">`;
             }
-
-            // 3. SELECTORES
-            const masterMatch = tv001.filter(row => row.Encabezado_Tabla?.toUpperCase().trim() === cleanId);
-            if (masterMatch.length > 0 && canEdit) {
-                const selectId = `select-${cleanId}`;
-                selectHydrations.push({ id: selectId, options: masterMatch.map(m => m.Valores_Encabezado), current: value, isDuplicate: (isNew && value !== "") });
-                return `
-                    <div class="border-b border-gray-700/40 py-1">
-                        <span class="text-[10px] font-bold text-blue-400 uppercase block -mb-1">${field.label}</span>
-                        <div class="flex items-center h-[32px]">
-                            <select name="${colId}" id="${selectId}" class="text-[16px] text-gray-200 font-medium w-full bg-transparent text-blue-300 outline-none p-0 appearance-none cursor-pointer scheme-dark">
-                                <option value="${value}">${value || '-- Seleccionar --'}</option>
-                            </select>
-                        </div>
-                    </div>`;
-            }
-
-            // 4. CAMPOS DE TEXTO / FECHA (Y campos No Editables)
-            let inputType = isDateOnly ? "date" : "text"; 
-            let displayValue = value;
-            if (value && isDateOnly) {
-                const valStr = String(value).trim();
-                if (valStr.includes('/')) {
-                    const p = valStr.split('/');
-                    if (p.length === 3) displayValue = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
-                } else if (valStr.includes('-')) {
-                    displayValue = valStr.split('T')[0];
-                }
-            } else if (value && isRegistryData) {
-                displayValue = (typeof getFormattedValue === 'function') ? getFormattedValue(colId, value) : value;
-            }
-//textos en modo EDIT
             return `
                 <div class="border-b border-gray-700/40 py-1">
-                    <span class="text-[10px] font-bold text-blue-400 uppercase block -mb-0.5">${field.label}</span>
-                    <div class="flex items-center h-[32px]">
-                        <input type="${inputType}" name="${colId}" id="input-${cleanId}" value="${displayValue}" 
-                            ${(!canEdit) ? 'readonly' : ''} 
-                            class="text-[16px] text-gray-200 font-medium w-full bg-transparent outline-none p-0 leading-tight focus:ring-0 ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''} scheme-dark">
+                    <span class="text-[10px] font-bold text-orange-400 uppercase block -mb-1">${field.label || 'ID Registro'}</span>
+                    <div class="flex items-center justify-between min-h-[32px]">
+                        <input type="text" name="${colId}" id="input-${cleanId}" value="${value}" readonly 
+                            class="text-[22px] text-blue-300 font-bold bg-transparent outline-none border-none focus:ring-0 p-0 m-0 w-full cursor-default">
+                        <span id="badge-status-edit" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold transition-all">
+                            ${rawStatus}
+                        </span>
                     </div>
                 </div>`;
-        }).join('');
+        }
 
-        if (window.lucide) lucide.createIcons();
-        if (typeof hydrateAllSelects === 'function') hydrateAllSelects(selectHydrations);
+        // --- 3. LÓGICA ESPECIAL PARA GASTOS (TD202DAT01) ---
+        if (cleanId === 'TD202DAT01') {
+            const isFijo = value === "Fijo";
+            return `
+                <div class="border-b border-gray-700/40 py-1">
+                    <div class="flex items-center justify-between -mb-1">
+                        <span class="text-[10px] font-bold text-blue-400 uppercase">${field.label}</span>
+                    </div>
+                    <div class="flex items-center justify-between h-[32px]">
+                        <input type="text" name="${colId}" id="input-TD202DAT01" value="${value}" readonly 
+                            class="bg-transparent outline-none border-none focus:ring-0 text-[18px] text-gray-200 font-bold p-0 m-0 w-full cursor-default">
+                        <div id="badge-gasto-type" class="flex items-center justify-center p-1 rounded-full ${isFijo ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-purple-500/20 text-purple-400 border border-purple-500/30'}">
+                            <i data-lucide="${isFijo ? 'lock' : 'calendar-clock'}" class="w-6 h-6"></i>
+                        </div>
+                        <button type="button" onclick="toggleGastosType()" class="ml-4 focus:outline-none flex items-center">
+                            <i id="icon-gasto-type" data-lucide="${isFijo ? 'toggle-right' : 'toggle-left'}" class="w-8 h-8" style="color: ${isFijo ? '#3b82f6' : '#a855f7'}"></i>
+                        </button>
+                    </div>
+                </div>`;
+        }
 
-        // Al final de renderFields, antes del return o cierre
-const inputH = document.getElementById('input-typereg-edit');
-if (inputH) {
-    inputH.name = `${prefix}TYPEREG`; // Le ponemos el nombre correcto (ej. TD101TYPEREG)
-    inputH.value = rawStatus; 
-    // Llamamos a la función de toggle pero sin cambiar el valor, solo para que pinte colores/iconos iniciales
-    actualizarVisualizacionStatus('edit', rawStatus);
-}   
+        // --- 4. SELECTORES (TV001) ---
+        const masterMatch = tv001.filter(row => row.Encabezado_Tabla?.toUpperCase().trim() === cleanId);
+        if (masterMatch.length > 0 && canEdit) {
+            const selectId = `select-${cleanId}`;
+            selectHydrations.push({ 
+                id: selectId, 
+                options: masterMatch.map(m => m.Valores_Encabezado), 
+                current: value, 
+                isDuplicate: (isNew && value !== "") 
+            });
+            return `
+                <div class="border-b border-gray-700/40 py-1">
+                    <span class="text-[10px] font-bold text-blue-400 uppercase block -mb-1">${field.label}</span>
+                    <div class="flex items-center h-[32px]">
+                        <select name="${colId}" id="${selectId}" class="text-[16px] text-gray-200 font-medium w-full bg-transparent outline-none p-0 appearance-none cursor-pointer scheme-dark">
+                            <option value="${value}">${value || '-- Seleccionar --'}</option>
+                        </select>
+                    </div>
+                </div>`;
+        }
 
-// Al final de tu función renderFields
-setTimeout(() => {
-    const statusInicial = document.getElementById('input-typereg-edit')?.value;
-    if (statusInicial === "Bloqueado") {
-        toggleFormLock(true);
-    }
-}, 100);
+        // --- 5. CAMPOS ESTÁNDAR (Texto y Fecha) ---
+        let inputType = isDateOnly ? "date" : "text"; 
+        let displayValue = value;
 
-    }
+        if (value && isDateOnly) {
+            const valStr = String(value).trim();
+            if (valStr.includes('/')) {
+                const p = valStr.split('/');
+                if (p.length === 3) displayValue = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+            } else if (valStr.includes('-')) {
+                displayValue = valStr.split('T')[0];
+            }
+        }
 
+        return `
+            <div class="border-b border-gray-700/40 py-1">
+                <span class="text-[10px] font-bold text-blue-400 uppercase block -mb-0.5">${field.label}</span>
+                <div class="flex items-center h-[32px]">
+                    <input type="${inputType}" name="${colId}" id="input-${cleanId}" value="${displayValue}" 
+                        ${(!canEdit) ? 'readonly' : ''} 
+                        class="text-[16px] text-gray-200 font-medium w-full bg-transparent outline-none p-0 leading-tight focus:ring-0 ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''} scheme-dark">
+                </div>
+            </div>`;
+    }).join('');
+
+    // --- INICIALIZACIÓN POST-RENDER ---
+
+    // 1. Sincronizar el Input Hidden del Header (El que creamos en el HTML fijo)
+    const inputH = document.getElementById('input-typereg-edit');
+    if (inputH) {
+        inputH.name = `${prefix}TYPEREG`; 
+        inputH.value = rawStatus; 
+        // Actualizar visualmente (colores de candados y toggle)
+        if (typeof actualizarVisualizacionStatus === 'function') {
+            actualizarVisualizacionStatus('edit', rawStatus);
+        }
+    }   
+
+    // 2. Aplicar Bloqueo si el registro ya viene bloqueado
+    setTimeout(() => {
+        if (rawStatus === "Bloqueado" && typeof toggleFormLock === 'function') {
+            toggleFormLock(true);
+        }
+    }, 100);
+
+    // 3. Lucide e Hidratación de Selects
+    if (window.lucide) lucide.createIcons();
+    if (typeof hydrateAllSelects === 'function') hydrateAllSelects(selectHydrations);
+    
+}
     function renderProfile() {
         const config = JSON.parse(localStorage.getItem(STORAGE_CONFIG) || '{}');
         const data = JSON.parse(localStorage.getItem(STORAGE_DATA) || '{}');
@@ -874,7 +877,6 @@ setTimeout(() => {
         const isBlocked = rawStatus.toUpperCase() === 'BLOQUEADO';
         const badgeHtml = `<span class="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 uppercase font-bold">Bloqueado</span>`;
 
-        // Dentro de renderProfile
         const statusControlHtml = `
             <div class="flex items-center gap-3">
                 <span id="badge-status" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold ${isActuallyBlocked ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}">
