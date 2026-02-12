@@ -844,21 +844,32 @@ function showViewMode() {
             }
 
             // --- 5. CAMPOS ESTÁNDAR (Texto y Fecha) ---
+// --- 5. CAMPOS ESTÁNDAR (Texto y Fecha) ---
             let inputType = isDateOnly ? "date" : "text"; 
             const isNombreC = cleanId.includes('NOMBREC');
-            const fieldIsReadOnly = !canEdit || isNombreC;
+            
+            // Determinamos si el campo es un "XX" (Bloqueado por config)
+            const isBlockedXX = !canEdit || isNombreC;
 
+            // Si es un campo bloqueado (XX), usamos un estilo que imite al renderProfile
+            // Si es editable, usamos el estilo estándar de formulario
             return `
                 <div class="border-b border-gray-700/40 py-1">
                     <div class="flex justify-between items-center -mb-0.5">
-                        <span class="text-[10px] font-bold text-blue-400 uppercase block">${field.label}</span>
-                        ${isRequired ? '<span class="text-[10px] text-red-400 font-bold italic pr-[12px] animate-pulse">Obligatorio</span>' : ''}
+                        <span class="text-[10px] font-bold ${isBlockedXX ? 'text-gray-500' : 'text-blue-400'} uppercase block">${field.label}</span>
+                        ${isRequired && !isBlockedXX ? '<span class="text-[10px] text-red-400 font-bold italic pr-[12px] animate-pulse">Obligatorio</span>' : ''}
                     </div>
                     <div class="flex items-center h-[32px]">
-                        <input type="${inputType}" name="${colId}" id="input-${cleanId}" value="${value}" 
-                            ${fieldIsReadOnly ? 'readonly' : ''} 
+                        <input type="${inputType}" 
+                            name="${colId}" 
+                            id="input-${cleanId}" 
+                            value="${value}" 
+                            ${isBlockedXX ? 'readonly tabindex="-1"' : ''} 
                             ${isRequired ? 'required' : ''} 
-                            class="text-[16px] text-gray-200 font-medium w-full bg-transparent outline-none p-0 pr-[12px] leading-tight focus:ring-0 ${fieldIsReadOnly ? 'opacity-70 cursor-default' : ''} scheme-dark ${isRequired ? 'placeholder-red-900/30' : ''}">
+                            class="text-[16px] font-medium w-full bg-transparent outline-none p-0 pr-[12px] leading-tight focus:ring-0 scheme-dark 
+                            ${isBlockedXX 
+                                ? 'text-red-300 opacity-80 cursor-default border-none shadow-none' 
+                                : 'text-yellow-200'}">
                     </div>
                 </div>`;
         }).join('');
