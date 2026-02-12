@@ -1086,7 +1086,7 @@ function showViewMode() {
         };
 
         // Llamada a tu función estable
-        await executeSubmit(payload, 'Registro Actualizado');
+        await executeSubmit(payload, 'Registro Procesado');
     }
 
     async function handleInsertSubmit(e) {
@@ -1100,7 +1100,7 @@ function showViewMode() {
             [`${prefix}TYPEREG`]: "Registrado",
             [`${prefix}RegistroUser`]: localStorage.getItem(KEYS.USUARIO_ID) || "User"
         };
-        await executeSubmit(payload, 'Nuevo Registro Creado');
+        await executeSubmit(payload, 'Proceso Completado Satisfactoriamente');
     }
 
     function duplicateCurrentRecord() {
