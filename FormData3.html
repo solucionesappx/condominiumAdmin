@@ -108,19 +108,13 @@
                             <i data-lucide="lock-open" class="w-4 h-4 text-green-400"></i>
                             <input type="hidden" name="PREFIX_TYPEREG" id="input-typereg-edit">
                         </div>
-                        <button id="btn-duplicate-record" 
-                                onclick="duplicateCurrentRecord()" 
-                                class="text-blue-400 hover:scale-110 transition-transform hidden" 
-                                title="Duplicar como Nuevo">
-                            <i data-lucide="copy-plus" class="w-6 h-6"></i>
-                        </button>
                         <button onclick="showViewMode()" class="text-red-400 hover:scale-110 transition-transform border-l-2 border-gray-600 pl-4 pr-4">
                             <i data-lucide="circle-x" class="w-6 h-6"></i>
                         </button>
                     </div>
                 </div>                
                 
-                <form id="editDataForm" class="space-y-1">
+                <form id="editDataForm" novalidate class="space-y-1">
                     <input type="hidden" id="formAction" name="action" value="editDynamicDataTD">                   
                     <div id="editDataFormFields" class="space-y-1"></div>                   
                     <button id="submitBtn" type="submit" class="w-full bg-blue-600 mt-6 py-4 rounded-lg font-bold text-white hover:bg-blue-700 transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2">
@@ -670,9 +664,9 @@ function showViewMode() {
             
             // Opcional: Cambiarle el texto o color para indicar que enviará un bloqueo
             if (isLocked) {
-                submitBtn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Guardar Bloqueo';
+                submitBtn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Guardar Bloqueo TLF';
             } else {
-                submitBtn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Guardar Cambios';
+                //submitBtn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Guardar Cambios TFL';
             }
             if (window.lucide) lucide.createIcons();
         }
@@ -730,59 +724,76 @@ function showViewMode() {
         const selectHydrations = [];
         const excludedIDTables = ['TD101', 'TD102', 'TD201']; 
 
-        // Ocultar botón duplicar en modo edición estándar
+        // 0. Control de UI según Acción
+        const actionInput = document.getElementById('formAction');
+        const isInsertAction = actionInput?.value === "registerDynamicDataTD";
+        
         const duplicateBtn = document.getElementById('btn-duplicate-record');
         if (duplicateBtn) {
-            duplicateBtn.classList.add('hidden');
-            duplicateBtn.style.display = 'none';
+            duplicateBtn.classList.toggle('hidden', isInsertAction || isNew);
+            duplicateBtn.style.display = (isInsertAction || isNew) ? 'none' : 'flex';
         }
 
         const rawStatus = data[`${prefix}TYPEREG`] || "Registrado";
 
         // Mapeo y generación de campos
         container.innerHTML = Object.keys(config).map(colId => {
+            
             const field = config[colId];
             const cleanId = colId.toUpperCase().trim();
-            let value = (data && data[colId] !== undefined) ? data[colId] : '';          
+            let value = (data && data[colId] !== undefined) ? data[colId] : '';           
             
-            // --- 1. EXCLUSIONES CRÍTICAS (Auditoría y Status) ---
-            // Excluimos TYPEREG y REGISTRO porque ya están en el Header o son internos
-            if (cleanId.endsWith('TYPEREG') || cleanId.includes('REGISTRO')) {
-                return ''; 
+            // --- PRE-PROCESAMIENTO DE VALORES (ESTABILIDAD) ---
+            const isDateOnly = cleanId.includes('FECHA');
+            const isNIF = cleanId.endsWith('NIF');
+
+            // 1. Normalización de Fechas (Evita el reinicio del input date)
+            if (isDateOnly && value) {
+                value = String(value).split('T')[0];
             }
+
+            // 2. Limpieza de decimales (Solo para números, excluyendo NIF y Fechas)
+            if (!isNIF && !isDateOnly && value !== '' && !isNaN(value) && typeof value !== 'boolean') {
+                const numValue = parseFloat(value);
+                if (numValue % 1 !== 0) {
+                    // Redondeamos a 2 y limpiamos ceros a la derecha
+                    value = Number(numValue.toFixed(2));
+                }
+            }
+
+            // --- 1. EXCLUSIONES CRÍTICAS ---
+            if (cleanId.endsWith('TYPEREG') || cleanId.includes('REGISTRO')) return ''; 
 
             const isTableID = cleanId === `${prefix}ID`;
             const isExcluded = excludedIDTables.includes(prefix);
-            const isDateOnly = cleanId.includes('FECHA');
             const canEdit = field.editable !== false;
+            
+            const isRequired = (field.Es_Obligatorio === true || field.Es_Obligatorio === "true") && !isTableID;
 
             // --- 2. LÓGICA DE ID ---
-const isInsertAction = document.getElementById('formAction')?.value === "registerDynamicDataTD";
-
-if (isTableID) {
-    if (isExcluded) {
-        return isNew ? '' : `<input type="hidden" name="${colId}" id="input-${cleanId}" value="${value}">`;
-    }
-    
-    // Si la acción es insertar (duplicado/nuevo), forzamos asteriscos SIEMPRE
-    const displayId = (isInsertAction || isNew) ? "*******" : value;
-    const isPlaceholderId = displayId === "*******";
-
-    return `
-        <div class="border-b border-gray-700/40 py-1">
-            <span class="text-[10px] font-bold text-orange-400 uppercase block -mb-1">${field.label || 'ID Registro'}</span>
-            <div class="flex items-center justify-between min-h-[32px]">
-                <input type="text" name="${colId}" id="input-${cleanId}" value="${displayId}" 
-                    readonly 
-                    class="text-[22px] ${isPlaceholderId ? 'text-orange-500/60' : 'text-blue-300'} font-bold bg-transparent outline-none border-none p-0 m-0 w-full cursor-default">
-                
-                ${isPlaceholderId 
-                    ? '<span class="text-[10px] text-orange-500/80 italic font-bold uppercase whitespace-nowrap tracking-tighter pr-12">Por asignar (Auto)</span>'
-                    : `<span id="badge-status-edit" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold whitespace-nowrap">${rawStatus}</span>`
+            if (isTableID) {
+                if (isExcluded) {
+                    return isNew ? '' : `<input type="hidden" name="${colId}" id="input-${cleanId}" value="${value}">`;
                 }
-            </div>
-        </div>`;
-}
+                
+                const displayId = (isInsertAction || isNew) ? "*******" : value;
+                const isPlaceholderId = displayId === "*******";
+
+                return `
+                    <div class="border-b border-gray-700/40 py-1">
+                        <span class="text-[10px] font-bold text-orange-400 uppercase block -mb-1">${field.label || 'ID Registro'}</span>
+                        <div class="flex items-center justify-between min-h-[32px]">
+                            <input type="text" name="${colId}" id="input-${cleanId}" value="${displayId}" 
+                                readonly 
+                                class="text-[22px] ${isPlaceholderId ? 'text-orange-500/60' : 'text-blue-300'} font-bold bg-transparent outline-none border-none p-0 m-0 w-full cursor-default">
+                            
+                            ${isPlaceholderId 
+                                ? '<span class="text-[10px] text-orange-500/80 italic font-bold uppercase whitespace-nowrap tracking-tighter pr-1">Auto-Asignado</span>'
+                                : `<span id="badge-status-edit" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold whitespace-nowrap">${rawStatus}</span>`
+                            }
+                        </div>
+                    </div>`;
+            }
 
             // --- 3. LÓGICA ESPECIAL PARA GASTOS (TD202DAT01) ---
             if (cleanId === 'TD202DAT01') {
@@ -815,13 +826,17 @@ if (isTableID) {
                     id: selectId, 
                     options: masterMatch.map(m => m.Valores_Encabezado), 
                     current: value, 
-                    isDuplicate: (isNew && value !== "") 
+                    isDuplicate: (isInsertAction && value !== "") 
                 });
                 return `
                     <div class="border-b border-gray-700/40 py-1">
-                        <span class="text-[10px] font-bold text-blue-400 uppercase block -mb-1">${field.label}</span>
+                        <div class="flex justify-between items-center -mb-1">
+                            <span class="text-[10px] font-bold text-blue-400 uppercase block">${field.label}</span>
+                            ${isRequired ? '<span class="text-[9px] text-red-400 font-bold italic animate-pulse">REQUERIDO</span>' : ''}
+                        </div>
                         <div class="flex items-center h-[32px]">
-                            <select name="${colId}" id="${selectId}" class="text-[16px] text-gray-200 font-medium w-full bg-transparent outline-none p-0 appearance-none cursor-pointer scheme-dark">
+                            <select name="${colId}" id="${selectId}" ${isRequired ? 'required' : ''} 
+                                class="text-[16px] text-gray-200 font-medium w-full bg-transparent outline-none p-0 appearance-none cursor-pointer scheme-dark">
                                 <option value="${value}">${value || '-- Seleccionar --'}</option>
                             </select>
                         </div>
@@ -830,57 +845,60 @@ if (isTableID) {
 
             // --- 5. CAMPOS ESTÁNDAR (Texto y Fecha) ---
             let inputType = isDateOnly ? "date" : "text"; 
-            let displayValue = value;
-
-            // REGLA PARA NOMBREC: Siempre solo lectura
             const isNombreC = cleanId.includes('NOMBREC');
             const fieldIsReadOnly = !canEdit || isNombreC;
 
             return `
                 <div class="border-b border-gray-700/40 py-1">
-                    <span class="text-[10px] font-bold text-blue-400 uppercase block -mb-0.5">${field.label}</span>
+                    <div class="flex justify-between items-center -mb-0.5">
+                        <span class="text-[10px] font-bold text-blue-400 uppercase block">${field.label}</span>
+                        ${isRequired ? '<span class="text-[9px] text-red-400 font-bold italic animate-pulse">REQUERIDO</span>' : ''}
+                    </div>
                     <div class="flex items-center h-[32px]">
-                        <input type="${inputType}" name="${colId}" id="input-${cleanId}" value="${displayValue}" 
+                        <input type="${inputType}" name="${colId}" id="input-${cleanId}" value="${value}" 
                             ${fieldIsReadOnly ? 'readonly' : ''} 
-                            class="text-[16px] text-gray-200 font-medium w-full bg-transparent outline-none p-0 pr-[24px] leading-tight focus:ring-0 ${fieldIsReadOnly ? 'opacity-70 cursor-default' : ''} scheme-dark">
+                            ${isRequired ? 'required' : ''} 
+                            class="text-[16px] text-gray-200 font-medium w-full bg-transparent outline-none p-0 pr-[12px] leading-tight focus:ring-0 ${fieldIsReadOnly ? 'opacity-70 cursor-default' : ''} scheme-dark ${isRequired ? 'placeholder-red-900/30' : ''}">
                     </div>
                 </div>`;
         }).join('');
 
-        // --- INICIALIZACIÓN POST-RENDER ---
+        // --- Lógica post-render (Botones, Status, Lucide, Hydration) ---
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            if (isInsertAction) {
+                //submitBtn.innerHTML = `<span>Confirmar y Crear Copia RF</span><i data-lucide="plus-circle" class="w-5 h-5"></i>`;
+                submitBtn.className = "px-6 py-2 rounded-lg bg-green-600 text-white text-sm font-bold flex items-center gap-2 hover:bg-green-700 transition-all w-full justify-center";
+            } else {
+                const isLocked = rawStatus === "Bloqueado";
+                //submitBtn.innerHTML = isLocked ? '<i data-lucide="save" class="w-4 h-4"></i> Guardar Bloqueo' : '<i data-lucide="save" class="w-4 h-4"></i> Guardar Cambios';
+                //submitBtn.className = "px-6 py-2 rounded-lg bg-blue-600 text-white text-sm font-bold flex items-center gap-2 hover:bg-blue-700 transition-all w-full justify-center";
+            }
+        }
 
-        // 1. Sincronizar el Input Hidden del Header (El que creamos en el HTML fijo)
         const inputH = document.getElementById('input-typereg-edit');
         if (inputH) {
             inputH.name = `${prefix}TYPEREG`; 
             inputH.value = rawStatus; 
-            // Actualizar visualmente (colores de candados y toggle)
             if (typeof actualizarVisualizacionStatus === 'function') {
                 actualizarVisualizacionStatus('edit', rawStatus);
             }
         }   
 
-        // 2. Aplicar Bloqueo si el registro ya viene bloqueado
         setTimeout(() => {
             if (rawStatus === "Bloqueado" && typeof toggleFormLock === 'function') {
                 toggleFormLock(true);
             }
         }, 100);
 
-        // 3. Lucide e Hidratación de Selects
         if (window.lucide) lucide.createIcons();
         if (typeof hydrateAllSelects === 'function') hydrateAllSelects(selectHydrations);
         
-        // 4. Reactivar cálculo de NOMBREC
         if (typeof setupNombreCAutoCalculate === 'function') {
-            // Le damos un pequeño respiro para que el DOM esté listo
             setTimeout(() => {
                 setupNombreCAutoCalculate(prefix);
-                
-                // Si es un duplicado, forzamos el primer cálculo manual
-                // buscando los inputs de Nombre y Apellido para disparar el evento
-                const nombreInput = document.querySelector(`[id$="DAT01"]`); // Ajusta según tus IDs
-                if (nombreInput) nombreInput.dispatchEvent(new Event('input'));
+                const nombreInput = document.querySelector(`[id$="DAT01"]`);
+                if (nombreInput && isInsertAction) nombreInput.dispatchEvent(new Event('input'));
             }, 200);
         }
     }
@@ -1036,10 +1054,24 @@ if (isTableID) {
     
     async function handleEditSubmit(e) {
         e.preventDefault();
+
+        if (!e.target.checkValidity()) {
+            const firstInvalid = e.target.querySelector(':invalid');
+            if (firstInvalid) firstInvalid.focus();
+            
+            if (typeof showSystemModal === 'function') {
+                showSystemModal({
+                    title: 'Atención',
+                    text: 'Por favor, completa los campos obligatorios.',
+                    type: 'warning'
+                });
+            }
+            return; // Detenemos todo si no es válido
+        }
+
         const currentData = JSON.parse(localStorage.getItem(STORAGE_DATA) || '{}');
         const prefix = currentData.TABLA_ORIGEN.split('_')[0].toUpperCase();
         
-        // Buscamos el valor del input con el nuevo ID corregido
         const statusValue = document.getElementById('input-typereg-edit')?.value || 
                             document.getElementById('input-typereg')?.value || 
                             currentData[`${prefix}TYPEREG`];
@@ -1052,6 +1084,8 @@ if (isTableID) {
             [`${prefix}TYPEREG`]: statusValue,
             [`${prefix}RegistroUser`]: localStorage.getItem(KEYS.USUARIO_ID) || "User"
         };
+
+        // Llamada a tu función estable
         await executeSubmit(payload, 'Registro Actualizado');
     }
 
@@ -1069,94 +1103,93 @@ if (isTableID) {
         await executeSubmit(payload, 'Nuevo Registro Creado');
     }
 
-function duplicateCurrentRecord() {
-    console.log("Iniciando duplicado...");
+    function duplicateCurrentRecord() {
+        console.log("Iniciando duplicado...");
 
-    // 1. Forzar visibilidad del panel de edición (por si acaso)
-    if (typeof showEditMode === 'function') showEditMode();
+        // 1. Forzar visibilidad del panel de edición (por si acaso)
+        if (typeof showEditMode === 'function') showEditMode();
 
-    // 2. Cambiar la acción ANTES de renderizar
-    const actionInput = document.getElementById('formAction');
-    if (actionInput) {
-        actionInput.value = "registerDynamicDataTD";
-        console.log("Acción cambiada a:", actionInput.value);
+        // 2. Cambiar la acción ANTES de renderizar
+        const actionInput = document.getElementById('formAction');
+        if (actionInput) {
+            actionInput.value = "registerDynamicDataTD";
+            console.log("Acción cambiada a:", actionInput.value);
+        }
+        
+        // 3. Recuperar datos (Usando las mismas llaves que tienes en el DOMContentLoaded)
+        // Nota: Si STORAGE_DATA y STORAGE_CONFIG son constantes, asegúrate que sean accesibles.
+        // Si fallan, intentamos con los strings directos.
+        const rawData = localStorage.getItem('TABLE_DATA'); 
+        const rawConfig = localStorage.getItem('TABLE_CONFIG'); 
+
+        if (!rawData || !rawConfig) {
+            console.error("Faltan datos en localStorage:", { rawData: !!rawData, rawConfig: !!rawConfig });
+            return;
+        }
+
+        const data = JSON.parse(rawData);
+        const config = JSON.parse(rawConfig);
+        const prefix = (data.TABLA_ORIGEN || "").split('_')[0].toUpperCase();
+
+        console.log("Datos recuperados. Prefijo detectado:", prefix);
+
+        // 4. UI: Título y Botón
+        document.getElementById('formTitle').textContent = "Nuevo Registro (duplicado)";
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            submitBtn.innerHTML = `<span>Confirmar y Crear Copia DCR</span><i data-lucide="plus-circle" class="w-5 h-5"></i>`;
+            submitBtn.onsubmit = handleInsertSubmit; // Vinculamos al insert
+        }
+        
+        // Vinculamos el formulario al handle de inserción
+        const form = document.getElementById('editDataForm');
+        if (form) form.onsubmit = handleInsertSubmit;
+
+        // 5. RE-RENDERIZAR (Esto activará tus asteriscos en renderFields)
+        console.log("Llamando a renderFields con config y data...");
+        renderFields(config, data, false); 
+
+        // 6. Limpieza de campos clave
+        setTimeout(() => {
+            console.log("Iniciando limpieza de campos clave...");
+            const allInputs = document.querySelectorAll('#editDataFormFields input');
+            allInputs.forEach(input => {
+                const name = input.name.toUpperCase();
+                if (name === `${prefix}ID`) return; 
+
+                const isKeyField = name === `${prefix}IDNOMBRE` || name === `${prefix}FECHA` || 
+                                name.includes('MONTO') || name.includes('CANTIDAD') || 
+                                name.includes('TOTAL') || name.includes('TASA');
+                
+                if (isKeyField) {
+                    input.placeholder = input.value || "";
+                    input.value = ""; 
+                    input.classList.add('italic', 'text-red-300');
+                }
+            });
+            if (window.lucide) lucide.createIcons();
+            console.log("Proceso de duplicado finalizado.");
+        }, 100);
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    
-    // 3. Recuperar datos (Usando las mismas llaves que tienes en el DOMContentLoaded)
-    // Nota: Si STORAGE_DATA y STORAGE_CONFIG son constantes, asegúrate que sean accesibles.
-    // Si fallan, intentamos con los strings directos.
-    const rawData = localStorage.getItem('TABLE_DATA'); 
-    const rawConfig = localStorage.getItem('TABLE_CONFIG'); 
-
-    if (!rawData || !rawConfig) {
-        console.error("Faltan datos en localStorage:", { rawData: !!rawData, rawConfig: !!rawConfig });
-        return;
-    }
-
-    const data = JSON.parse(rawData);
-    const config = JSON.parse(rawConfig);
-    const prefix = (data.TABLA_ORIGEN || "").split('_')[0].toUpperCase();
-
-    console.log("Datos recuperados. Prefijo detectado:", prefix);
-
-    // 4. UI: Título y Botón
-    document.getElementById('formTitle').textContent = "Nuevo Registro (duplicado)";
-    const submitBtn = document.getElementById('submitBtn');
-    if (submitBtn) {
-        submitBtn.innerHTML = `<span>Confirmar y Crear Copia</span><i data-lucide="plus-circle" class="w-5 h-5"></i>`;
-        submitBtn.onsubmit = handleInsertSubmit; // Vinculamos al insert
-    }
-    
-    // Vinculamos el formulario al handle de inserción
-    const form = document.getElementById('editDataForm');
-    if (form) form.onsubmit = handleInsertSubmit;
-
-    // 5. RE-RENDERIZAR (Esto activará tus asteriscos en renderFields)
-    console.log("Llamando a renderFields con config y data...");
-    renderFields(config, data, false); 
-
-    // 6. Limpieza de campos clave
-    setTimeout(() => {
-        console.log("Iniciando limpieza de campos clave...");
-        const allInputs = document.querySelectorAll('#editDataFormFields input');
-        allInputs.forEach(input => {
-            const name = input.name.toUpperCase();
-            if (name === `${prefix}ID`) return; 
-
-            const isKeyField = name === `${prefix}IDNOMBRE` || name === `${prefix}FECHA` || 
-                               name.includes('MONTO') || name.includes('CANTIDAD') || 
-                               name.includes('TOTAL') || name.includes('TASA');
-            
-            if (isKeyField) {
-                input.placeholder = input.value || "";
-                input.value = ""; 
-                input.classList.add('italic', 'text-red-300');
-            }
-        });
-        if (window.lucide) lucide.createIcons();
-        console.log("Proceso de duplicado finalizado.");
-    }, 100);
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
 
     async function DeleteRecord() {
-        // 1. Recuperar datos y normalizar prefijos (Tu lógica actual impecable)
         const data = JSON.parse(localStorage.getItem('TABLE_DATA') || localStorage.getItem(STORAGE_DATA) || '{}');
         const tableOrigin = data.TABLA_ORIGEN || "";
         const prefix = tableOrigin.split('_')[0].toUpperCase();
-        
+        const keys = JSON.parse(localStorage.getItem('KEYS') || '{}');
+        const usuarioLogueado = localStorage.getItem(KEYS.USUARIO_ID) || keys.Usuario_ID;
+        const perfilUsuario = String(keys.Usuario_Perfil || "").trim().toUpperCase(); // Perfil del usuario
+        const idxCorrecto = localStorage.getItem('Usuario_Idx');
         const ownerKey = `${prefix}REGISTROUSER`;
         const registroOwner = data[ownerKey] || data[`${prefix}RegistroUser`]; 
-
-        const usuarioLogueado = localStorage.getItem(KEYS.USUARIO_ID);
-        const idxCorrecto = localStorage.getItem('Usuario_Idx');
-
         const idLogueadoStr = String(usuarioLogueado || "").trim();
         const idOwnerStr = String(registroOwner || "").trim();
+        const esAdmin = (perfilUsuario === 'ADMIN');
+        const esPropietario = (idOwnerStr !== "" && idOwnerStr === idLogueadoStr);
 
-        // 2. Validación de Propietario
-        if (!idOwnerStr || idOwnerStr !== idLogueadoStr) {
+        if (!esPropietario && !esAdmin) {
             await showSystemModal({ 
                 title: 'Acceso Denegado', 
                 text: 'Solo el propietario de este registro o un Administrador pueden eliminarlo.', 
@@ -1165,18 +1198,15 @@ function duplicateCurrentRecord() {
             return;
         }
 
-        // 3. Confirmación y Solicitud de Idx de Seguridad (Todo en un solo paso)
-        // Usamos el modo isPrompt para que el usuario escriba su clave en el modal
         const pinIngresado = await showSystemModal({
             title: 'Confirmar Eliminación',
             text: 'Este registro será borrado permanentemente. Ingrese su Idx de Seguridad para autorizar:',
-            type: 'danger', // Usamos danger para resaltar el riesgo
+            type: 'danger', 
             isPrompt: true,
             placeholder: 'Ingrese su Idx...'
         });
 
-        // 4. Manejo de la respuesta del Modal
-        if (pinIngresado === null) return; // El usuario presionó "Cancelar" o cerró el modal
+        if (pinIngresado === null) return; 
 
         if (pinIngresado.trim() !== String(idxCorrecto).trim()) {
             await showSystemModal({ 
@@ -1187,7 +1217,6 @@ function duplicateCurrentRecord() {
             return;
         }
 
-        // 5. Preparar Payload para el Backend
         const payload = {
             action: "deleteDynamicDataTD",
             TABLA_DESTINO: tableOrigin,
@@ -1196,12 +1225,7 @@ function duplicateCurrentRecord() {
             usuario_id: idLogueadoStr
         };
 
-        try {
-            // 6. Ejecución del envío
-            // executeSubmit ya gestiona el modal de éxito internamente
-            await executeSubmit(payload, 'Registro eliminado correctamente');
-
-            // 7. Redirección Automática
+        try { await executeSubmit(payload, 'Registro eliminado correctamente');
             window.location.href = 'Datos2.html';
 
         } catch (error) {
@@ -1233,7 +1257,7 @@ function duplicateCurrentRecord() {
         const data = JSON.parse(localStorage.getItem(STORAGE_DATA));
         document.getElementById('formTitle').textContent = `Editar: ${getFriendlyTableName(data.TABLA_ORIGEN)}`;
         document.getElementById('formAction').value = "editDynamicDataTD";
-        document.getElementById('submitBtn').textContent = "Guardar Cambios";           
+        document.getElementById('submitBtn').textContent = "Guardar Cambios SEM";           
         renderFields(config, data, false);
         togglePanels('edit');
     }
