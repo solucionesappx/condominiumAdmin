@@ -9,18 +9,16 @@
         html { font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent; }
         :root { --bg: #1f2937;--txt: #f3f4f6;--surf: #374151;--p-soft: #60a5fa;--th: #374151; }
         .light-mode { --bg: #f9fafb; --txt: #111827; --surf: #ffffff; } 
-        .light-mode header, .light-mode footer { border-color: #e5e7eb; }
-        html, body { background-color: var(--bg); color: var(--txt); transition: background .3s, color .3s; }   
-        #app-container { width:100%; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; box-shadow:0 0 20px rgba(0,0,0,.2); position:relative; transition:max-width .4s ease-in-out; }
-        #app-container { background-color: var(--bg); }
+        body { background-color: var(--bg); color: var(--txt); transition: background .3s, color .3s; display: flex; justify-content: center; min-height: 100vh; margin: 0; }
+        #app-container { width:100%; min-height:100vh; display:flex; flex-direction:column; box-shadow:0 0 20px rgba(0,0,0,.2); position:relative; background-color: var(--bg); transition: max-width 0.3s ease-in-out; }
         .mode-mobile { max-width:500px; }
         .mode-desktop { max-width:100%!important; }
-        header, footer { width:100%; max-width:inherit; z-index:50; left:50%; transform:translateX(-50%); position:fixed; background:var(--surf); border-color:#4b5563; }
-        header, .footer-tienda { background: #374151 !important;color: #f3f4f6 !important;border-color: #4b5563 !important;}
-        header h1 { color: white !important; }       
-        main { flex-grow:1; overflow-y:auto; padding:76px 1rem 72px; }
-        .footer-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:.75rem; color:var(--txt); cursor:pointer; transition:color .2s; }
-        .footer-btn:hover { color:#152c94; }
+        header, footer { width:100%; max-width:inherit; z-index:50; position:fixed; background:var(--surf); border-color:#4b5563; left: auto; right: auto; transform: none; }
+        header { top:0; height:3.5rem; display:flex; align-items:center; border-bottom:1px solid; }
+        footer { bottom:0; height:4.5rem; display:flex; align-items:center; border-top:1px solid; }
+        header, .footer-tienda { background: #374151 !important; color: #f3f4f6 !important; border-color: #4b5563 !important;}
+        main { flex-grow:1; overflow-y:auto; padding:76px 1rem 80px; width: 100%; box-sizing: border-box; }
+        .footer-btn { display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:.75rem; color:var(--txt); cursor:pointer; flex: 1; }
         .footer-btn.active { color:var(--p-soft); font-weight:700; }
         .modal-overlay { position:fixed; inset:0; background:rgba(17,24,39,.8); backdrop-filter:blur(4px); z-index:100; display:flex; justify-content:center; align-items:center; }
         .modal-content { background:var(--surf); border:1px solid #4b5563; border-radius:1rem; width:90%; max-width:320px; }
@@ -29,28 +27,31 @@
         .hidden { display: none !important; }
     </style>
     <style>    
-        /* Estilos específicos para las métricas y buscador*/
-        .metric-card { width: 33.333333%; padding-top: 0; padding-bottom: 0; padding-left: 0.375rem; padding-right: 0.375rem; border-radius: 0.75rem; background-color: var(--bg); display: flex; align-items: center; gap: 0.5rem; }
+        /* Métricas y Buscador */
+        .metric-card { width: 33.333333%; padding: 0 0.375rem; border-radius: 0.75rem; background-color: var(--bg); display: flex; align-items: center; gap: 0.5rem; }
         .search-actions-container { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; width: 100%; }
         .search-input-wrapper { position: relative; flex-grow: 1; border-radius: 0.75rem; }      
-        .search-input-wrapper input { width: 100%; padding-left: 2.5rem; padding-right: 1rem;  padding-top: 0.5rem; padding-bottom: 0.5rem;  border-radius: 0.75rem; box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06); }
-        .search-input-wrapper input { background-color: #374151; color: #f3f4f6; border: 1px solid #4b5563; transition: border-color 0.15s, box-shadow 0.15s; outline: none; }
+        .search-input-wrapper input { width: 100%; padding: 0.5rem 1rem 0.5rem 2.5rem; border-radius: 0.75rem; box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.06); background-color: #374151; color: #f3f4f6; border: 1px solid #4b5563; transition: border-color 0.15s, box-shadow 0.15s; outline: none; }
         .search-input-wrapper input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px #3b82f6; }
         .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #9ca3af; }
         .search-highlight { background-color: rgba(59, 130, 246, 0.4); color: #ffffff; border-radius: 2px; padding: 0 2px; font-weight: bold; }
-        /* Estilos específicos para la tabla */       
-        .table-scroll-container { max-height: calc(96vh - 350px); overflow-x: auto; overflow-y: auto; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1); display: block; border: 1px solid #4b5563; }
+        /* Tabla de Datos */
+        .table-scroll-container { max-height: calc(100vh - 340px); min-height: 180px; overflow: auto; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: block; border: 1px solid #4b5563; }
         .table-scroll-container table { border-collapse: collapse; table-layout: auto; width: max-content; min-width: 100%; }
-        .table-scroll-container th { color: #137be2; position: sticky; top: 0; z-index: 20; background-color: var(--th); padding: 0.25rem 0.5rem; text-align: center !important; white-space: nowrap; font-size: 0.75rem; border-bottom: 1px solid rgba(255, 255, 255, 0.2); cursor: pointer; text-transform: uppercase; }
-        .sticky-id-cell { position: sticky; left: 0; z-index: 40; font-weight: bold; text-align: center; border-right: 1px solid rgba(255, 255, 255, 0.2); }
-        .table-scroll-container th.sticky-id-cell { color: #137be2; background-color: var(--th); border-bottom: 1px solid rgba(255, 255, 255, 0.2); z-index: 40; }
-        .table-data-cell.sticky-id-cell { color: #137be2; background-color: var(--th); font-size: 0.75rem; }
-        .table-data-cell { height: 24px; font-size: 0.75rem; padding-top: 0.25rem; padding-bottom: 0.25rem; white-space: nowrap; transition: background-color 0.15s, color 0.15s, border-color 0.15s; border-bottom: 1px solid #4b5563;}
+        .table-scroll-container th { color: #137be2; position: sticky; top: 0; z-index: 20; background-color: var(--th); padding: 0.25rem 0.5rem; text-align: center; white-space: nowrap; font-size: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.2); cursor: pointer; text-transform: uppercase; }
+        .sticky-id-cell { position: sticky; left: 0; z-index: 40; font-weight: bold; text-align: center; border-right: 1px solid rgba(255,255,255,0.2); background-color: var(--th); }
+        .table-data-cell { height: 24px; font-size: 0.75rem; padding: 0.25rem 0.5rem; white-space: nowrap; transition: background-color 0.15s; border-bottom: 1px solid #4b5563; }
         .header-content { display: flex; align-items: center; justify-content: center; gap: 4px; }
         .row-warning-text .table-data-cell { color: #fcd34d; }
         .row-alert-text .table-data-cell { background-color: #582b2b; color: #fca5a5; font-weight: 600; }
         #table-selector { appearance: none; -webkit-appearance: none; padding-right: 20px; background-repeat: no-repeat; background-position: right center; background-size: 14px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); }
         #table-selector option { font-size: 14px; padding: 12px; background-color: #1f2937; color: white; }
+        /* Ajuste para rotación Landscape */
+        @media (orientation: landscape) and (max-height: 500px) { 
+            main { padding: 64px 0.5rem 64px; } 
+            .table-scroll-container { max-height: calc(100vh - 200px); } 
+            #data-view-container .flex.p-4 { display: none; } /* Oculta métricas en horizontal para dar espacio a la tabla */
+        }
     </style>
 </head>
 <body class="dark">
@@ -263,6 +264,7 @@
         return namesMap[techName]?.label || techName;
     }
     function logout(){localStorage.clear();window.location.href='index.html'}  
+    // Manejador de ancho dinámico para rotación
 
 console.group("🔍 REVISIÓN DE LOCALSTORAGE");
 console.log("👤 Datos de Usuario (KEYS):");
@@ -293,9 +295,26 @@ console.groupEnd();
     document.addEventListener('DOMContentLoaded', () => {
         initDataApp();
         setupSearch();
+        adjustLayoutForOrientation(); // Ejecutar al cargar para detectar el estado inicial
+
         const btnReload = document.getElementById('reload-icon');
         if(btnReload) btnReload.onclick = () => fetchData(currentTableName);
     });
+
+    function adjustLayoutForOrientation() {
+        const container = document.getElementById('app-container');
+        if (!container) return;
+
+        // Detectamos si el ancho supera al alto (Landscape)
+        if (window.innerWidth > window.innerHeight) {
+            container.classList.replace('mode-mobile', 'mode-desktop');
+        } else {
+            container.classList.replace('mode-desktop', 'mode-mobile');
+        }
+    }
+
+    // El evento 'resize' cubre rotaciones en móviles y cambios de ventana en PC
+    window.addEventListener('resize', adjustLayoutForOrientation);
 
     function showRegisterMode() {
         const tableKey = String(currentTableName).trim().toUpperCase();
@@ -306,29 +325,32 @@ console.groupEnd();
         rawHeaders.forEach(h => {
             const colKey = String(h).trim().toUpperCase();
             
-            // Buscamos usando las claves exactas del backend: ID_Columna
+            // Buscamos la configuración extendida del backend para esta columna específica
             const colConfig = rawConfig.find(c => 
                 String(c.ID_Columna || '').trim().toUpperCase() === colKey
             );                
             
-            // Buscamos usando la clave exacta del backend: Visible_Encabezado
             const marca = colConfig ? String(colConfig.Visible_Encabezado || '').trim().toUpperCase() : '';
             const cleanH = colKey.replace(/_/g, '');
 
-    const isXX = marca.includes('XX'); 
+            const isXX = marca.includes('XX'); 
 
-    const isBlocked = isXX || 
-                    colKey === `${tablePrefix}ID` || 
-                    cleanH.includes('REGISTRO') || 
-                    cleanH.includes('DAT01') || 
-                    cleanH.includes('NOMBREC');
+            const isBlocked = isXX || 
+                            colKey === `${tablePrefix}ID` || 
+                            cleanH.includes('REGISTRO') || 
+                            cleanH.includes('DAT01') || 
+                            cleanH.includes('NOMBREC');
 
+            // Construimos el objeto que consumirá FormData3.html
             configMap[h] = {
                 label: tableConfig.displayMap[h] || h,
-                editable: !isBlocked 
+                editable: !isBlocked,
+                // INTEGRACIÓN CRÍTICA: Capturamos el valor del backend
+                Es_Obligatorio: colConfig ? colConfig.Es_Obligatorio === true : false
             };
         });
 
+        // Guardamos en LocalStorage y redirigimos
         localStorage.setItem('TABLE_CONFIG', JSON.stringify(configMap));
         localStorage.setItem('TABLE_DATA', JSON.stringify({ TABLA_ORIGEN: currentTableName, IS_NEW: true }));           
         window.location.href = 'FormData3.html';
@@ -354,9 +376,11 @@ console.groupEnd();
         const selector = document.getElementById('table-selector');
         if (selector) selector.disabled = true; 
         if (typeof toggleGlobalLoader === 'function') toggleGlobalLoader(true); 
+        
         await loadTableFriendlyNames();
         const userTienda = localStorage.getItem(KEYS.TIENDA) || 'DEFAULT';           
         const url = `${GET_URL}?tableName=${encodeURIComponent(tableName)}&userTienda=${encodeURIComponent(userTienda)}`;
+        
         try {
             const response = await fetch(url);               
             if (!response.ok) throw new Error(`Error de red: ${response.status}`);               
@@ -366,21 +390,49 @@ console.groupEnd();
                 currentTableName = tableName;
                 localStorage.setItem('LAST_VISITED_TABLE', tableName); 
                 originalData = res.data || [];
-                rawConfig = res.fullConfig || res.config || [];
+                
+                // --- BLOQUE DE CORRECCIÓN PARA CONFIGURACIÓN ---
+                // 1. Priorizar fullConfig del backend
+                const configArray = res.fullConfig || res.config || [];
+                rawConfig = configArray; 
+
+                // 2. Construir el Mapa para el almacenamiento local (lo que usa renderFields)
+                const mappedConfig = {};
+                configArray.forEach(item => {
+                    mappedConfig[item.ID_Columna] = {
+                        label: item.Nombre_Encabezado || item.ID_Columna,
+                        visible: item.Visible_Encabezado,
+                        align: item.Justificado_Campo || 'left',
+                        Es_Obligatorio: item.Es_Obligatorio === true // Capturamos el nuevo valor
+                    };
+                });
+
+                // 3. Persistir en localStorage para que el formulario lo vea
+                localStorage.setItem('TABLE_CONFIG', JSON.stringify(mappedConfig));
+                // -----------------------------------------------
+
                 currentSearchTerm = "";
                 const searchInput = document.getElementById('search-input');
                 if (searchInput) searchInput.value = "";
+                
                 if (res.availableTables) {
                     updateTableSelector(res.availableTables);
                 }
+                
                 updateStatusTag(tableName);
                 if (selector) selector.value = tableName;
+
                 tableConfig.columnOrder = res.columnOrder || (originalData.length > 0 ? Object.keys(originalData[0]) : []);
                 tableConfig.displayMap = res.displayMap || {};
                 tableConfig.alignMap = res.alignMap || {};
+
                 renderTable(originalData);
                 updateMetrics(originalData);
+                
                 if (window.lucide) lucide.createIcons();                   
+                
+                console.log("Configuración cargada y guardada con campos obligatorios.");
+
             } else {
                 const errorMsg = res.message || res.error || "Error desconocido en el servidor";
                 if (typeof showSystemModal === 'function') {
@@ -460,16 +512,11 @@ console.groupEnd();
             // ACCIÓN DE EDICIÓN (Doble Click)
             tr.ondblclick = () => {
                 const configMap = {};
-                const tableKey = String(currentTableName).trim().toUpperCase();
-                const tablePrefix = tableKey.split('_')[0];
-                
-                // Definimos los nombres técnicos de los campos de auditoría para esta tabla
                 const securityField = `${tablePrefix}REGISTROUSER`;
                 const auditDataField = `${tablePrefix}REGISTRODATA`;
 
                 headers.forEach(h => {
                     const colKey = h.toUpperCase().trim();
-                    // Buscamos la configuración que viene del backend para esta columna
                     const colConfig = rawConfig.find(c => String(c.ID_Columna || '').toUpperCase().trim() === colKey);
                     const marca = colConfig ? String(colConfig.Visible_Encabezado || '').toUpperCase().trim() : '';
                     
@@ -477,45 +524,31 @@ console.groupEnd();
                     const cleanH = colKey.replace(/_/g, '');
                     const isXX = marca.includes('XX'); 
 
-                    // Lógica de Bloqueo: Campos no editables
-                    // Bloqueamos si tiene 'XX', si es la llave primaria, o si son campos de auditoría/identidad
-                    const isBlocked = isXX || 
-                                    isPK || 
-                                    colKey === securityField || 
-                                    colKey === auditDataField ||
-                                    cleanH.includes('REGISTRO') || 
-                                    cleanH.includes('DAT01') || 
-                                    cleanH.includes('NOMBREC');
+                    const isBlocked = isXX || isPK || colKey === securityField || colKey === auditDataField ||
+                                    cleanH.includes('REGISTRO') || cleanH.includes('DAT01') || cleanH.includes('NOMBREC');
 
-                    // Construimos el mapa de configuración para FormData3.html
                     configMap[h] = {
                         label: tableConfig.displayMap[h] || h,
-                        editable: !isBlocked, // Si está bloqueado, editable será false
-                        type: (h.endsWith('ID') && !isPK) ? 'select' : 'text'
+                        editable: !isBlocked,
+                        type: (h.endsWith('ID') && !isPK) ? 'select' : 'text',
+                        // INTEGRACIÓN CRÍTICA: También pasamos la obligatoriedad en la edición
+                        Es_Obligatorio: colConfig ? colConfig.Es_Obligatorio === true : false
                     };
                 });
 
-                // GUARDADO EN STORAGE
-                // 1. Guardamos la configuración de los campos (qué se edita y qué no)
+                // Guardamos configuración y datos de la fila
                 localStorage.setItem('TABLE_CONFIG', JSON.stringify(configMap));
-
-                // 2. Guardamos la DATA:
-                // Al usar { ...row } nos aseguramos de pasar TODO el objeto que vino del servidor,
-                // incluyendo el campo RegistroUser aunque no esté en el 'configMap' como visible.
                 const dataToSave = { 
                     ...row, 
                     TABLA_ORIGEN: currentTableName,
-                    // Forzamos que el prefijo esté disponible para facilitar el borrado
                     PREFIX_ORIGEN: tablePrefix 
                 };
-                
                 localStorage.setItem('TABLE_DATA', JSON.stringify(dataToSave));
 
-                // Redirección al formulario
                 window.location.href = 'FormData3.html';
             };
 
-            // Celda numeración indexada
+            // Celda numeración
             const tdId = document.createElement('td');
             tdId.className = 'table-data-cell sticky-id-cell text-center';
             if (isBlockedRow) tdId.style.color = '#ef4444'; 
