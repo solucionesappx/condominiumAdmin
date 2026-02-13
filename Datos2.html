@@ -316,46 +316,17 @@ console.groupEnd();
     // El evento 'resize' cubre rotaciones en móviles y cambios de ventana en PC
     window.addEventListener('resize', adjustLayoutForOrientation);
 
-    function showRegisterMode() {
-        const tableKey = String(currentTableName).trim().toUpperCase();
-        const tablePrefix = tableKey.split('_')[0];
-        const configMap = {};
-        const rawHeaders = tableConfig.columnOrder || (originalData.length > 0 ? Object.keys(originalData[0]) : []);
-        
-        rawHeaders.forEach(h => {
-            const colKey = String(h).trim().toUpperCase();
-            
-            // Buscamos la configuración extendida del backend para esta columna específica
-            const colConfig = rawConfig.find(c => 
-                String(c.ID_Columna || '').trim().toUpperCase() === colKey
-            );                
-            
-            const marca = colConfig ? String(colConfig.Visible_Encabezado || '').trim().toUpperCase() : '';
-            const cleanH = colKey.replace(/_/g, '');
-
-            const isXX = marca.includes('XX'); 
-
-            const isBlocked = isXX || 
-                            colKey === `${tablePrefix}ID` || 
-                            cleanH.includes('REGISTRO') || 
-                            cleanH.includes('DAT01') || 
-                            cleanH.includes('NOMBREC');
-
-            // Construimos el objeto que consumirá FormData3.html
-            configMap[h] = {
-                label: tableConfig.displayMap[h] || h,
-                editable: !isBlocked,
-                // INTEGRACIÓN CRÍTICA: Capturamos el valor del backend
-                Es_Obligatorio: colConfig ? colConfig.Es_Obligatorio === true : false,
-                Es_Calculado: colConfig ? colConfig.Es_Calculado === true : false
-            };
-        });
-
-        // Guardamos en LocalStorage y redirigimos
-        localStorage.setItem('TABLE_CONFIG', JSON.stringify(configMap));
-        localStorage.setItem('TABLE_DATA', JSON.stringify({ TABLA_ORIGEN: currentTableName, IS_NEW: true }));           
-        window.location.href = 'FormData3.html';
-    }
+function showRegisterMode() {
+    // Ya no reconstruimos configMap aquí porque fetchData ya lo dejó perfecto
+    // en localStorage['TABLE_CONFIG']. 
+    // Solo nos aseguramos de que el estado sea para un registro nuevo.
+    
+    localStorage.setItem('TABLE_DATA', JSON.stringify({ 
+        TABLA_ORIGEN: currentTableName, 
+        IS_NEW: true 
+    }));           
+    window.location.href = 'FormData3.html';
+}
 
     function updateTableSelector(tables) {
         const selector = document.getElementById('table-selector');
@@ -375,55 +346,70 @@ console.groupEnd();
 
     async function fetchData(tableName) {
         const selector = document.getElementById('table-selector');
-        if (selector) selector.disabled = true; 
-        if (typeof toggleGlobalLoader === 'function') toggleGlobalLoader(true); 
-        
+        if (selector) selector.disabled = true;
+        if (typeof toggleGlobalLoader === 'function') toggleGlobalLoader(true);
+
         await loadTableFriendlyNames();
-        const userTienda = localStorage.getItem(KEYS.TIENDA) || 'DEFAULT';           
+        const userTienda = localStorage.getItem(KEYS.TIENDA) || 'DEFAULT';
         const url = `${GET_URL}?tableName=${encodeURIComponent(tableName)}&userTienda=${encodeURIComponent(userTienda)}`;
-        
+
         try {
-            const response = await fetch(url);               
-            if (!response.ok) throw new Error(`Error de red: ${response.status}`);               
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Error de red: ${response.status}`);
             const res = await response.json();
-            
+
             if (res.success) {
                 currentTableName = tableName;
-                localStorage.setItem('LAST_QUERY_RESPONSE', JSON.stringify(res)); // <--- Guardamos todo
-                localStorage.setItem('LAST_VISITED_TABLE', tableName); 
+                localStorage.setItem('LAST_QUERY_RESPONSE', JSON.stringify(res));
+                localStorage.setItem('LAST_VISITED_TABLE', tableName);
                 originalData = res.data || [];
-                
-                // --- BLOQUE DE CORRECCIÓN PARA CONFIGURACIÓN ---
-                // 1. Priorizar fullConfig del backend
+
+                // --- BLOQUE DE CORRECCIÓN PARA CONFIGURACIÓN (Sincronizado con Backend) ---
+                // 1. Definimos configArray a partir de la respuesta del servidor
                 const configArray = res.fullConfig || res.config || [];
                 rawConfig = configArray; 
 
-                // 2. Construir el Mapa para el almacenamiento local (Sincronizado con renderFields)
                 const mappedConfig = {};
+                const tablePrefix = String(tableName).split('_')[0].toUpperCase();
+
                 configArray.forEach(item => {
+                    const colKey = String(item.ID_Columna).trim().toUpperCase();
+                    const marca = String(item.Visible_Encabezado || "").trim().toUpperCase();
+                    
+                    // Jerarquía de estados
+                    const isCalculated = item.Es_Calculado === true || String(item.Es_Calculado).toLowerCase() === "calc";
+                    const isXX = marca.includes('XX');
+                    const isPK = colKey === `${tablePrefix}ID`;
+                    const isSystem = colKey.includes('REGISTRO') || colKey.includes('NOMBREC');
+
                     mappedConfig[item.ID_Columna] = {
                         label: item.Nombre_Encabezado || item.ID_Columna,
                         visible: item.Visible_Encabezado,
                         align: item.Justificado_Campo || 'left',
-                        // INTEGRACIÓN CRÍTICA: Captura si el campo es editable o bloqueado (XX)
-                        editable: item.Editable_Campo !== false && item.Editable_Campo !== "false",
-                        Es_Obligatorio: item.Es_Obligatorio === true || item.Es_Obligatorio === "true",
-                        Es_Calculado: item.Es_Calculado === true || item.Es_Calculado === "true"
+                        
+                        // REGLA MAESTRA: Si es ID, es Calculado (calc), es sistema o tiene XX -> NO EDITABLE
+                        editable: !isCalculated && !isXX && !isPK && !isSystem, 
+                        
+                        Es_Obligatorio: item.Es_Obligatorio === true || String(item.Es_Obligatorio).toLowerCase() === "true",
+                        Es_Calculado: isCalculated,
+                        
+                        // El tipo se decide aquí para evitar lógica pesada en el formulario
+                        type: (isCalculated || isXX || isPK) ? 'text' : (colKey.includes('IDNOMBRE') ? 'select' : 'text')
                     };
                 });
 
-                // 3. Persistir en localStorage para que el formulario y el perfil lo vean
+                // Guardamos la configuración procesada para que FormData3 la use directamente
                 localStorage.setItem('TABLE_CONFIG', JSON.stringify(mappedConfig));
-                // -----------------------------------------------
+                // -------------------------------------------------------------------------
 
                 currentSearchTerm = "";
                 const searchInput = document.getElementById('search-input');
                 if (searchInput) searchInput.value = "";
-                
+
                 if (res.availableTables) {
                     updateTableSelector(res.availableTables);
                 }
-                
+
                 updateStatusTag(tableName);
                 if (selector) selector.value = tableName;
 
@@ -433,10 +419,9 @@ console.groupEnd();
 
                 renderTable(originalData);
                 updateMetrics(originalData);
-                
-                if (window.lucide) lucide.createIcons();                   
-                
-                console.log("Configuración y datos actualizados: Campos editables y obligatorios sincronizados.");
+
+                if (window.lucide) lucide.createIcons();
+                console.log("Datos y configuración jerárquica actualizados correctamente.");
 
             } else {
                 const errorMsg = res.message || res.error || "Error desconocido en el servidor";
@@ -452,7 +437,7 @@ console.groupEnd();
                 showSystemModal({ title: 'Error de Conexión', text: "No se pudo establecer comunicación con el servidor.", type: 'warning' });
             }
         } finally {
-            if (selector) selector.disabled = false; 
+            if (selector) selector.disabled = false;
             if (typeof toggleGlobalLoader === 'function') toggleGlobalLoader(false);
         }
     }
@@ -515,44 +500,18 @@ console.groupEnd();
             }`;
 
             // ACCIÓN DE EDICIÓN (Doble Click)
-            tr.ondblclick = () => {
-                const configMap = {};
-                const securityField = `${tablePrefix}REGISTROUSER`;
-                const auditDataField = `${tablePrefix}REGISTRODATA`;
-
-                headers.forEach(h => {
-                    const colKey = h.toUpperCase().trim();
-                    const colConfig = rawConfig.find(c => String(c.ID_Columna || '').toUpperCase().trim() === colKey);
-                    const marca = colConfig ? String(colConfig.Visible_Encabezado || '').toUpperCase().trim() : '';
-                    
-                    const isPK = colKey === `${tablePrefix}ID`;
-                    const cleanH = colKey.replace(/_/g, '');
-                    const isXX = marca.includes('XX'); 
-
-                    const isBlocked = isXX || isPK || colKey === securityField || colKey === auditDataField ||
-                                    cleanH.includes('REGISTRO') || cleanH.includes('DAT01') || cleanH.includes('NOMBREC');
-
-                    configMap[h] = {
-                        label: tableConfig.displayMap[h] || h,
-                        editable: !isBlocked,
-                        type: (h.endsWith('ID') && !isPK) ? 'select' : 'text',
-                        // INTEGRACIÓN CRÍTICA: También pasamos la obligatoriedad en la edición
-                        Es_Obligatorio: colConfig ? colConfig.Es_Obligatorio === true : false,
-                        Es_Calculado: colConfig ? colConfig.Es_Calculado === true : false
-                    };
-                });
-
-                // Guardamos configuración y datos de la fila
-                localStorage.setItem('TABLE_CONFIG', JSON.stringify(configMap));
-                const dataToSave = { 
-                    ...row, 
-                    TABLA_ORIGEN: currentTableName,
-                    PREFIX_ORIGEN: tablePrefix 
-                };
-                localStorage.setItem('TABLE_DATA', JSON.stringify(dataToSave));
-
-                window.location.href = 'FormData3.html';
-            };
+tr.ondblclick = () => {
+    // En lugar de reconstruir configMap, usamos el que ya está en localStorage
+    // que fue guardado por fetchData de forma jerárquica.
+    
+    const dataToSave = { 
+        ...row, 
+        TABLA_ORIGEN: currentTableName,
+        PREFIX_ORIGEN: tablePrefix 
+    };
+    localStorage.setItem('TABLE_DATA', JSON.stringify(dataToSave));
+    window.location.href = 'FormData3.html';
+};
 
             // Celda numeración
             const tdId = document.createElement('td');
