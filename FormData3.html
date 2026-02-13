@@ -684,37 +684,89 @@ function showViewMode() {
         input.value = numericValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function sanitizePayload(formData) {
-        const entries = Object.fromEntries(formData.entries());
+function sanitizePayload(formData) {
+    // 1. Convertimos el FormData a objeto plano
+    const entries = Object.fromEntries(formData.entries());
+    
+    // 2. Recuperamos la configuración para identificar campos calculados
+    const config = JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}');
+    
+    for (let key in entries) {
+        const k = key.toUpperCase().trim();
         
-        for (let key in entries) {
-            const k = key.toUpperCase();
-            let val = String(entries[key]).trim();
-            if (k.includes('FECHA')) {
-                if (val.includes('-')) { // Formato yyyy-mm-dd
-                    const parts = val.split('-');
-                    if (parts.length === 3) {
-                        entries[key] = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                    }
+        // --- EXCLUSIÓN DE CAMPOS CALCULADOS ---
+        // Si el campo es calculado en la config, lo eliminamos. 
+        // Al no enviarlo, el Backend entrará en modo "Preservar Fórmula".
+        if (config[key] && (config[key].Es_Calculado === true || config[key].Es_Calculado === "true")) {
+            delete entries[key];
+            console.log(`🛡️ Sanitize: Excluyendo ${key} por ser campo calculado.`);
+            continue; 
+        }
+
+        let val = String(entries[key] || "").trim();
+
+        // --- PROCESAMIENTO DE FECHAS ---
+        if (k.includes('FECHA')) {
+            if (val.includes('-')) {
+                const parts = val.split('-');
+                if (parts.length === 3) {
+                    entries[key] = `${parts[2]}/${parts[1]}/${parts[0]}`;
                 }
-                continue; // Saltamos a la siguiente iteración
             }
-            if (k.includes('MONTO') || k.includes('CANTIDAD') || k.includes('TOTAL') || k === 'TD101DAT01') {
-                if (val === "" || val === "0,00") {
-                    entries[key] = 0;
-                    continue;
-                }
-                if (val.includes(',')) {
-                    val = val.replace(/\./g, '').replace(',', '.');
-                } else {
-                    val = val.replace(/\s/g, '');
-                }              
-                const numericVal = parseFloat(val);
-                entries[key] = isNaN(numericVal) ? 0 : numericVal;
+            continue;
+        }
+
+        // --- PROCESAMIENTO DE NÚMEROS ---
+        const camposNumericos = ['MONTO', 'CANTIDAD', 'TOTAL', 'TD101DAT01'];
+        if (camposNumericos.some(t => k.includes(t))) {
+            if (val === "" || val === "0,00") {
+                entries[key] = 0;
+                continue;
             }
-        }       
-        return entries;
+            if (val.includes(',')) {
+                val = val.replace(/\./g, '').replace(',', '.');
+            } else {
+                val = val.replace(/\s/g, '');
+            }               
+            const numericVal = parseFloat(val);
+            entries[key] = isNaN(numericVal) ? 0 : numericVal;
+        }
+    }       
+    return entries;
+}
+
+function resultadoBuscarX(valorSeleccionado, columnaCalculada, prefijoBuscado) {
+    const lastResponse = JSON.parse(localStorage.getItem('LAST_QUERY_RESPONSE') || '{}');
+    const masterFields = lastResponse.masterFields || [];
+
+    // Normalizamos el valor seleccionado para comparar
+    const valorLimpio = String(valorSeleccionado || "").trim().toUpperCase();
+
+    // 1. Buscamos la columna que sirve de "llave" de búsqueda (IDNOMBRE)
+    const columnaNombres = masterFields.find(f => 
+        f.Nombre_Tabla.startsWith(prefijoBuscado) && 
+        f.Encabezado_Tabla === `${prefijoBuscado}IDNOMBRE`
+    );
+
+    if (!columnaNombres) return "";
+
+    // 2. Buscamos el índice comparando todo como strings
+    const filaIndex = columnaNombres.Valores_Encabezado.findIndex(v => 
+        String(v || "").trim().toUpperCase() === valorLimpio
+    );
+
+    if (filaIndex !== -1) {
+        // 3. Buscamos la columna destino (ej: TD101ID)
+        const columnaDestino = masterFields.find(f => 
+            f.Nombre_Tabla.startsWith(prefijoBuscado) && 
+            f.Encabezado_Tabla === columnaCalculada
+        );
+        
+        return columnaDestino ? columnaDestino.Valores_Encabezado[filaIndex] : "";
     }
+
+    return "";
+}
 
     function renderFields(config, data, isNew = false) {
         const container = document.getElementById('editDataFormFields');
@@ -1003,7 +1055,7 @@ function showViewMode() {
             let textClass = 'text-[16px] text-gray-200 font-medium'; // Clase base
 
             if (isTableID) { textClass = 'text-[22px] text-red-300 font-medium';
-            } else if (isHighPriority) {textClass = 'text-[16px] text-red-300 font-medium';
+            } else if (isHighPriority) {textClass = 'text-[16px] text-red-300 font-medium'; 
             }
 
             return `
@@ -1063,56 +1115,60 @@ function showViewMode() {
         }
     }
     
-    async function handleEditSubmit(e) {
-        e.preventDefault();
+async function handleEditSubmit(e) {
+    e.preventDefault();
+    const currentData = JSON.parse(localStorage.getItem(STORAGE_DATA) || '{}');
+    const config = JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}');
+    const prefix = currentData.TABLA_ORIGEN.split('_')[0].toUpperCase();
 
-        if (!e.target.checkValidity()) {
-            const firstInvalid = e.target.querySelector(':invalid');
-            if (firstInvalid) firstInvalid.focus();
-            
-            if (typeof showSystemModal === 'function') {
-                showSystemModal({
-                    title: 'Atención',
-                    text: 'Por favor, completa los campos obligatorios.',
-                    type: 'warning'
-                });
-            }
-            return; // Detenemos todo si no es válido
+    let payload = {
+        action: "editDynamicDataTD",
+        TABLA_DESTINO: currentData.TABLA_ORIGEN,
+        CAMPO_CLAVE: `${prefix}ID`,
+        ...sanitizePayload(new FormData(e.target)),
+        [`${prefix}TYPEREG`]: document.getElementById('input-typereg-edit')?.value || currentData[`${prefix}TYPEREG`],
+        [`${prefix}RegistroUser`]: localStorage.getItem(KEYS.USUARIO_ID) || "User"
+    };
+
+    console.log("🔍 PAYLOAD ANTES DEL FILTRO:", { ...payload });
+
+    Object.keys(payload).forEach(key => {
+        const campoConfig = config[key];
+        if (campoConfig && (campoConfig.Es_Calculado === true || campoConfig.Es_Calculado === "true")) {
+            console.log(`🚫 ELIMINANDO DEL PAYLOAD: ${key}`);
+            delete payload[key];
         }
+    });
 
-        const currentData = JSON.parse(localStorage.getItem(STORAGE_DATA) || '{}');
-        const prefix = currentData.TABLA_ORIGEN.split('_')[0].toUpperCase();
-        
-        const statusValue = document.getElementById('input-typereg-edit')?.value || 
-                            document.getElementById('input-typereg')?.value || 
-                            currentData[`${prefix}TYPEREG`];
+    console.log("🚀 PAYLOAD FINAL (A ENVIAR):", payload);
+    
+    // Verificación visual en la red
+    const params = new URLSearchParams(payload);
+    console.log("📡 STRING FINAL DE ENVÍO:", params.toString());
 
-        const payload = {
-            action: "editDynamicDataTD",
-            TABLA_DESTINO: currentData.TABLA_ORIGEN,
-            CAMPO_CLAVE: `${prefix}ID`,
-            ...sanitizePayload(new FormData(e.target)),
-            [`${prefix}TYPEREG`]: statusValue,
-            [`${prefix}RegistroUser`]: localStorage.getItem(KEYS.USUARIO_ID) || "User"
-        };
+    await executeSubmit(payload, 'Registro Procesado2');
+}
 
-        // Llamada a tu función estable
-        await executeSubmit(payload, 'Registro Procesado');
-    }
+async function handleInsertSubmit(e) {
+    e.preventDefault();
+    const config = JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}');
+    
+    let payload = {
+        action: document.getElementById('formAction').value || "registerDynamicDataTD",
+        TABLA_DESTINO: localStorage.getItem('LAST_TABLE_VIEWED') || "ERROR",
+        ...sanitizePayload(new FormData(e.target)),
+        // ... otros campos ...
+    };
 
-    async function handleInsertSubmit(e) {
-        e.preventDefault();
-        const config = JSON.parse(localStorage.getItem(STORAGE_CONFIG) || '{}');
-        const prefix = Object.keys(config)[0].split('ID')[0].toUpperCase();
-        const payload = {
-            action: document.getElementById('formAction').value || "registerDynamicDataTD",
-            TABLA_DESTINO: localStorage.getItem('LAST_TABLE_VIEWED') || JSON.parse(localStorage.getItem(STORAGE_DATA)).TABLA_ORIGEN,
-            ...sanitizePayload(new FormData(e.target)),
-            [`${prefix}TYPEREG`]: "Registrado",
-            [`${prefix}RegistroUser`]: localStorage.getItem(KEYS.USUARIO_ID) || "User"
-        };
-        await executeSubmit(payload, 'Proceso Completado Satisfactoriamente');
-    }
+    // --- FILTRO FINAL DE SEGURIDAD ---
+    Object.keys(payload).forEach(key => {
+        if (config[key] && config[key].Es_Calculado) {
+            delete payload[key];
+        }
+    });
+
+    await executeSubmit(payload, 'Proceso Completado');
+}
 
     function duplicateCurrentRecord() {
         console.log("Iniciando duplicado...");
