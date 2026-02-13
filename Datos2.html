@@ -346,7 +346,8 @@ console.groupEnd();
                 label: tableConfig.displayMap[h] || h,
                 editable: !isBlocked,
                 // INTEGRACIÓN CRÍTICA: Capturamos el valor del backend
-                Es_Obligatorio: colConfig ? colConfig.Es_Obligatorio === true : false
+                Es_Obligatorio: colConfig ? colConfig.Es_Obligatorio === true : false,
+                Es_Calculado: colConfig ? colConfig.Es_Calculado === true : false
             };
         });
 
@@ -388,6 +389,7 @@ console.groupEnd();
             
             if (res.success) {
                 currentTableName = tableName;
+                localStorage.setItem('LAST_QUERY_RESPONSE', JSON.stringify(res)); // <--- Guardamos todo
                 localStorage.setItem('LAST_VISITED_TABLE', tableName); 
                 originalData = res.data || [];
                 
@@ -396,18 +398,21 @@ console.groupEnd();
                 const configArray = res.fullConfig || res.config || [];
                 rawConfig = configArray; 
 
-                // 2. Construir el Mapa para el almacenamiento local (lo que usa renderFields)
+                // 2. Construir el Mapa para el almacenamiento local (Sincronizado con renderFields)
                 const mappedConfig = {};
                 configArray.forEach(item => {
                     mappedConfig[item.ID_Columna] = {
                         label: item.Nombre_Encabezado || item.ID_Columna,
                         visible: item.Visible_Encabezado,
                         align: item.Justificado_Campo || 'left',
-                        Es_Obligatorio: item.Es_Obligatorio === true // Capturamos el nuevo valor
+                        // INTEGRACIÓN CRÍTICA: Captura si el campo es editable o bloqueado (XX)
+                        editable: item.Editable_Campo !== false && item.Editable_Campo !== "false",
+                        Es_Obligatorio: item.Es_Obligatorio === true || item.Es_Obligatorio === "true",
+                        Es_Calculado: item.Es_Calculado === true || item.Es_Calculado === "true"
                     };
                 });
 
-                // 3. Persistir en localStorage para que el formulario lo vea
+                // 3. Persistir en localStorage para que el formulario y el perfil lo vean
                 localStorage.setItem('TABLE_CONFIG', JSON.stringify(mappedConfig));
                 // -----------------------------------------------
 
@@ -431,7 +436,7 @@ console.groupEnd();
                 
                 if (window.lucide) lucide.createIcons();                   
                 
-                console.log("Configuración cargada y guardada con campos obligatorios.");
+                console.log("Configuración y datos actualizados: Campos editables y obligatorios sincronizados.");
 
             } else {
                 const errorMsg = res.message || res.error || "Error desconocido en el servidor";
@@ -532,7 +537,8 @@ console.groupEnd();
                         editable: !isBlocked,
                         type: (h.endsWith('ID') && !isPK) ? 'select' : 'text',
                         // INTEGRACIÓN CRÍTICA: También pasamos la obligatoriedad en la edición
-                        Es_Obligatorio: colConfig ? colConfig.Es_Obligatorio === true : false
+                        Es_Obligatorio: colConfig ? colConfig.Es_Obligatorio === true : false,
+                        Es_Calculado: colConfig ? colConfig.Es_Calculado === true : false
                     };
                 });
 
