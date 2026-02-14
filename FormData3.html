@@ -235,118 +235,118 @@
         return value;
     }
 
-function toggleIdxVisibility() {
-    const inputIdx = document.getElementById('modalInputIdx');
-    const eyeIcon = document.getElementById('eyeIcon');
-    
-    if (inputIdx.type === 'password') {
-        inputIdx.type = 'text';
-        eyeIcon.setAttribute('data-lucide', 'eye-off');
-    } else {
-        inputIdx.type = 'password';
-        eyeIcon.setAttribute('data-lucide', 'eye');
+    function toggleIdxVisibility() {
+        const inputIdx = document.getElementById('modalInputIdx');
+        const eyeIcon = document.getElementById('eyeIcon');
+        
+        if (inputIdx.type === 'password') {
+            inputIdx.type = 'text';
+            eyeIcon.setAttribute('data-lucide', 'eye-off');
+        } else {
+            inputIdx.type = 'password';
+            eyeIcon.setAttribute('data-lucide', 'eye');
+        }
+        
+        // Si usas Lucide, refrescamos el icono
+        if (window.lucide) lucide.createIcons();
     }
-    
-    // Si usas Lucide, refrescamos el icono
-    if (window.lucide) lucide.createIcons();
-}
 
-function showSystemModal({
-    title,
-    text,
-    type = 'info',
-    showCancel = false,
-    isPrompt = false,
-    placeholder = '...',
-    inputType = 'text' // Nuevo parámetro: 'text' o 'password'
-}) {
-    return new Promise(res => {
-        const m = document.getElementById('system-modal'),
-            ti = document.getElementById('sys-modal-title'),
-            te = document.getElementById('sys-modal-text'),
-            ic = document.getElementById('sys-modal-icon'),
-            ac = document.getElementById('sys-modal-actions'),
-            iCont = document.getElementById('sys-modal-input-container'),
-            input = document.getElementById('sys-modal-input');
+    function showSystemModal({
+        title,
+        text,
+        type = 'info',
+        showCancel = false,
+        isPrompt = false,
+        placeholder = '...',
+        inputType = 'text' // Nuevo parámetro: 'text' o 'password'
+    }) {
+        return new Promise(res => {
+            const m = document.getElementById('system-modal'),
+                ti = document.getElementById('sys-modal-title'),
+                te = document.getElementById('sys-modal-text'),
+                ic = document.getElementById('sys-modal-icon'),
+                ac = document.getElementById('sys-modal-actions'),
+                iCont = document.getElementById('sys-modal-input-container'),
+                input = document.getElementById('sys-modal-input');
 
-        // 1. Configuración visual básica
-        ti.textContent = title;
-        te.textContent = text;
-        const colors = { warning: 'text-amber-400', info: 'text-blue-400', danger: 'text-red-400' },
-            icons = { warning: 'alert-triangle', info: 'info', danger: 'trash-2' };
+            // 1. Configuración visual básica
+            ti.textContent = title;
+            te.textContent = text;
+            const colors = { warning: 'text-amber-400', info: 'text-blue-400', danger: 'text-red-400' },
+                icons = { warning: 'alert-triangle', info: 'info', danger: 'trash-2' };
 
-        ic.innerHTML = `<i data-lucide="${icons[type]}" class="w-12 h-12 ${colors[type]}"></i>`;
-        ac.innerHTML = '';
+            ic.innerHTML = `<i data-lucide="${icons[type]}" class="w-12 h-12 ${colors[type]}"></i>`;
+            ac.innerHTML = '';
 
-        // 2. Manejo del Input (Prompt) con Toggle de Visibilidad
-        if (isPrompt) {
-            iCont.classList.remove('hidden');
-            iCont.className = "relative mt-4 mb-6"; // Aseguramos posición relativa para el icono y para el campo
-            
-            input.value = '';
-            input.type = inputType; // Asigna 'password' o 'text'
-            input.placeholder = placeholder;
-            
-            // Eliminamos cualquier botón de "ojo" previo si existe
-            const oldToggle = iCont.querySelector('.toggle-password-btn');
-            if (oldToggle) oldToggle.remove();
-
-            // Si es de tipo password, inyectamos el botón del ojo
-            if (inputType === 'password') {
-                const toggleBtn = document.createElement('button');
-                toggleBtn.type = "button";
-                toggleBtn.className = "toggle-password-btn absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-400 transition-colors";
-                toggleBtn.innerHTML = `<i data-lucide="eye" class="w-5 h-5"></i>`;
+            // 2. Manejo del Input (Prompt) con Toggle de Visibilidad
+            if (isPrompt) {
+                iCont.classList.remove('hidden');
+                iCont.className = "relative mt-4 mb-6"; // Aseguramos posición relativa para el icono y para el campo
                 
-                toggleBtn.onclick = () => {
-                    const isPass = input.type === 'password';
-                    input.type = isPass ? 'text' : 'password';
-                    toggleBtn.innerHTML = `<i data-lucide="${isPass ? 'eye-off' : 'eye'}" class="w-5 h-5"></i>`;
-                    if (window.lucide) lucide.createIcons();
-                };
-                iCont.appendChild(toggleBtn);
+                input.value = '';
+                input.type = inputType; // Asigna 'password' o 'text'
+                input.placeholder = placeholder;
+                
+                // Eliminamos cualquier botón de "ojo" previo si existe
+                const oldToggle = iCont.querySelector('.toggle-password-btn');
+                if (oldToggle) oldToggle.remove();
+
+                // Si es de tipo password, inyectamos el botón del ojo
+                if (inputType === 'password') {
+                    const toggleBtn = document.createElement('button');
+                    toggleBtn.type = "button";
+                    toggleBtn.className = "toggle-password-btn absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-400 transition-colors";
+                    toggleBtn.innerHTML = `<i data-lucide="eye" class="w-5 h-5"></i>`;
+                    
+                    toggleBtn.onclick = () => {
+                        const isPass = input.type === 'password';
+                        input.type = isPass ? 'text' : 'password';
+                        toggleBtn.innerHTML = `<i data-lucide="${isPass ? 'eye-off' : 'eye'}" class="w-5 h-5"></i>`;
+                        if (window.lucide) lucide.createIcons();
+                    };
+                    iCont.appendChild(toggleBtn);
+                }
+
+                setTimeout(() => input.focus(), 100);
+            } else {
+                iCont.classList.add('hidden');
             }
 
-            setTimeout(() => input.focus(), 100);
-        } else {
-            iCont.classList.add('hidden');
-        }
+            // 3. Función para cerrar y resolver
+            const close = (val) => {
+                // Limpiamos el tipo por defecto al cerrar para futuros usos
+                input.type = 'text'; 
+                m.classList.add('hidden');
+                res(val);
+            };
 
-        // 3. Función para cerrar y resolver
-        const close = (val) => {
-            // Limpiamos el tipo por defecto al cerrar para futuros usos
-            input.type = 'text'; 
-            m.classList.add('hidden');
-            res(val);
-        };
+            // 4. Botón Cancelar
+            if (showCancel || isPrompt) {
+                const bc = document.createElement('button');
+                bc.className = 'px-4 py-2 rounded-lg bg-gray-600 text-white text-sm font-medium border-2 border-transparent hover:bg-red-700 hover:border-red-500 transition-all duration-300';
+                bc.textContent = 'Cancelar';
+                bc.onclick = () => close(isPrompt ? null : false);
+                ac.appendChild(bc);
+            }
 
-        // 4. Botón Cancelar
-        if (showCancel || isPrompt) {
-            const bc = document.createElement('button');
-            bc.className = 'px-4 py-2 rounded-lg bg-gray-600 text-white text-sm font-medium border-2 border-transparent hover:bg-red-700 hover:border-red-500 transition-all duration-300';
-            bc.textContent = 'Cancelar';
-            bc.onclick = () => close(isPrompt ? null : false);
-            ac.appendChild(bc);
-        }
+            // 5. Botón Aceptar
+            const bp = document.createElement('button');
+            bp.className = 'px-6 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium border-2 border-transparent hover:bg-blue-800 hover:border-blue-400 transition-all duration-300';
+            bp.textContent = 'Aceptar';
+            bp.onclick = () => {
+                close(isPrompt ? input.value : true);
+            };
+            ac.appendChild(bp);
 
-        // 5. Botón Aceptar
-        const bp = document.createElement('button');
-        bp.className = 'px-6 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium border-2 border-transparent hover:bg-blue-800 hover:border-blue-400 transition-all duration-300';
-        bp.textContent = 'Aceptar';
-        bp.onclick = () => {
-            close(isPrompt ? input.value : true);
-        };
-        ac.appendChild(bp);
+            // Soporte para tecla Enter
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') bp.click();
+            };
 
-        // Soporte para tecla Enter
-        input.onkeydown = (e) => {
-            if (e.key === 'Enter') bp.click();
-        };
-
-        m.classList.remove('hidden');
-        if (window.lucide) lucide.createIcons();
-    });
-}
+            m.classList.remove('hidden');
+            if (window.lucide) lucide.createIcons();
+        });
+    }
 
     function logout(){localStorage.clear();window.location.href='index.html'}
 
@@ -562,25 +562,25 @@ console.groupEnd();
         }
     });
 
-function showViewMode() {
-    const data = JSON.parse(localStorage.getItem('TABLE_DATA') || '{}');
-    if (data.IS_NEW === true) {
-        window.location.href = 'Datos2.html';
-        return;
-    }
+    function showViewMode() {
+        const data = JSON.parse(localStorage.getItem('TABLE_DATA') || '{}');
+        if (data.IS_NEW === true) {
+            window.location.href = 'Datos2.html';
+            return;
+        }
 
-    // --- REPARACIÓN AQUÍ ---
-    // Restauramos la acción por defecto para que renderFields no vea "register" la próxima vez
-    const actionInput = document.getElementById('formAction');
-    if (actionInput) actionInput.value = "updateDynamicDataTD";
+        // --- REPARACIÓN AQUÍ ---
+        // Restauramos la acción por defecto para que renderFields no vea "register" la próxima vez
+        const actionInput = document.getElementById('formAction');
+        if (actionInput) actionInput.value = "updateDynamicDataTD";
 
-    const detailPanel = document.getElementById('DetalleDataContent');
-    const editPanel = document.getElementById('EditDataContent');           
-    if (detailPanel && editPanel) {
-        detailPanel.classList.remove('hidden');
-        editPanel.classList.add('hidden');
+        const detailPanel = document.getElementById('DetalleDataContent');
+        const editPanel = document.getElementById('EditDataContent');           
+        if (detailPanel && editPanel) {
+            detailPanel.classList.remove('hidden');
+            editPanel.classList.add('hidden');
+        }
     }
-}
 
     function closeFormAndReturn() {
         try {
@@ -672,54 +672,54 @@ function showViewMode() {
         if(window.lucide) lucide.createIcons();
     }
 
-function toggleFormLock(isLocked) {
-    const form = document.getElementById('editDataForm');
-    if (!form) return;
+    function toggleFormLock(isLocked) {
+        const form = document.getElementById('editDataForm');
+        if (!form) return;
 
-    // 1. Seleccionamos inputs, selects y textareas
-    const inputs = form.querySelectorAll('input:not(#input-typereg-edit), select, textarea');
-    
-    inputs.forEach(el => {
-        // --- EL AJUSTE VITAL ---
-        // Si el campo tiene el "escudo" de TABLE_CONFIG, NO lo habilitamos nunca
-        if (el.hasAttribute('data-permanent-lock')) {
-            el.readOnly = true;
-            el.classList.add('cursor-default');
-            if (el.tagName === 'SELECT') el.disabled = true;
-            return; // Saltamos este elemento
+        // 1. Seleccionamos inputs, selects y textareas
+        const inputs = form.querySelectorAll('input:not(#input-typereg-edit), select, textarea');
+        
+        inputs.forEach(el => {
+            // --- EL AJUSTE VITAL ---
+            // Si el campo tiene el "escudo" de TABLE_CONFIG, NO lo habilitamos nunca
+            if (el.hasAttribute('data-permanent-lock')) {
+                el.readOnly = true;
+                el.classList.add('cursor-default');
+                if (el.tagName === 'SELECT') el.disabled = true;
+                return; // Saltamos este elemento
+            }
+
+            // Lógica normal para campos editables
+            if (isLocked) {
+                el.classList.add('opacity-40', 'cursor-not-allowed');
+                el.style.pointerEvents = 'none';
+                el.readOnly = true; 
+                if (el.tagName === 'SELECT') el.disabled = true;
+            } else {
+                el.classList.remove('opacity-40', 'cursor-not-allowed');
+                el.style.pointerEvents = 'auto';
+                el.readOnly = false;
+                if (el.tagName === 'SELECT') el.disabled = false;
+            }
+        });
+
+        // 2. Botón Guardar
+        const submitBtn = document.getElementById('submitBtn'); 
+        if (submitBtn) {
+            submitBtn.disabled = false; 
+            submitBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+            if (isLocked) {
+                submitBtn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Guardar Bloqueo TLF';
+            }
+            if (window.lucide) lucide.createIcons();
         }
 
-        // Lógica normal para campos editables
-        if (isLocked) {
-            el.classList.add('opacity-40', 'cursor-not-allowed');
-            el.style.pointerEvents = 'none';
-            el.readOnly = true; 
-            if (el.tagName === 'SELECT') el.disabled = true;
-        } else {
-            el.classList.remove('opacity-40', 'cursor-not-allowed');
-            el.style.pointerEvents = 'auto';
-            el.readOnly = false;
-            if (el.tagName === 'SELECT') el.disabled = false;
-        }
-    });
-
-    // 2. Botón Guardar
-    const submitBtn = document.getElementById('submitBtn'); 
-    if (submitBtn) {
-        submitBtn.disabled = false; 
-        submitBtn.classList.remove('opacity-40', 'cursor-not-allowed');
-        if (isLocked) {
-            submitBtn.innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Guardar Bloqueo TLF';
-        }
-        if (window.lucide) lucide.createIcons();
+        // 3. Botón especial de gastos
+        const btnGasto = document.querySelector('button[onclick="toggleGastosType()"]');
+        if (btnGasto) {
+            btnGasto.style.display = isLocked ? 'none' : 'flex';
+        }        
     }
-
-    // 3. Botón especial de gastos
-    const btnGasto = document.querySelector('button[onclick="toggleGastosType()"]');
-    if (btnGasto) {
-        btnGasto.style.display = isLocked ? 'none' : 'flex';
-    }        
-}
 
     function applyMask(input) {
         let value = input.value.replace(/\D/g, '');
@@ -728,364 +728,369 @@ function toggleFormLock(isLocked) {
         input.value = numericValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-function sanitizePayload(formData) {
-    // 1. Convertimos el FormData a objeto plano
-    const entries = Object.fromEntries(formData.entries());
-    
-    // 2. Recuperamos la configuración para identificar campos calculados
-    const config = JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}');
-    
-    for (let key in entries) {
-        const k = key.toUpperCase().trim();
+    function sanitizePayload(formData) {
+        // 1. Convertimos el FormData a objeto plano
+        const entries = Object.fromEntries(formData.entries());
         
-        // --- EXCLUSIÓN DE CAMPOS CALCULADOS ---
-        // Si el campo es calculado en la config, lo eliminamos. 
-        // Al no enviarlo, el Backend entrará en modo "Preservar Fórmula".
-        if (config[key] && (config[key].Es_Calculado === true || config[key].Es_Calculado === "true")) {
-            delete entries[key];
-            console.log(`🛡️ Sanitize: Excluyendo ${key} por ser campo calculado.`);
-            continue; 
-        }
-
-        let val = String(entries[key] || "").trim();
-
-        // --- PROCESAMIENTO DE FECHAS ---
-        if (k.includes('FECHA')) {
-            if (val.includes('-')) {
-                const parts = val.split('-');
-                if (parts.length === 3) {
-                    entries[key] = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                }
+        // 2. Recuperamos la configuración para identificar campos calculados
+        const config = JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}');
+        
+        for (let key in entries) {
+            const k = key.toUpperCase().trim();
+            
+            // --- EXCLUSIÓN DE CAMPOS CALCULADOS ---
+            // Si el campo es calculado en la config, lo eliminamos. 
+            // Al no enviarlo, el Backend entrará en modo "Preservar Fórmula".
+            if (config[key] && (config[key].Es_Calculado === true || config[key].Es_Calculado === "true")) {
+                delete entries[key];
+                console.log(`🛡️ Sanitize: Excluyendo ${key} por ser campo calculado.`);
+                continue; 
             }
-            continue;
-        }
 
-        // --- PROCESAMIENTO DE NÚMEROS ---
-        const camposNumericos = ['MONTO', 'CANTIDAD', 'TOTAL', 'TD101DAT01'];
-        if (camposNumericos.some(t => k.includes(t))) {
-            if (val === "" || val === "0,00") {
-                entries[key] = 0;
+            let val = String(entries[key] || "").trim();
+
+            // --- PROCESAMIENTO DE FECHAS ---
+            if (k.includes('FECHA')) {
+                if (val.includes('-')) {
+                    const parts = val.split('-');
+                    if (parts.length === 3) {
+                        entries[key] = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    }
+                }
                 continue;
             }
-            if (val.includes(',')) {
-                val = val.replace(/\./g, '').replace(',', '.');
-            } else {
-                val = val.replace(/\s/g, '');
-            }               
-            const numericVal = parseFloat(val);
-            entries[key] = isNaN(numericVal) ? 0 : numericVal;
-        }
-    }       
-    return entries;
-}
 
-function resultadoBuscarX(valorSeleccionado, columnaCalculada, prefijoBuscado) {
-    const lastResponse = JSON.parse(localStorage.getItem('LAST_QUERY_RESPONSE') || '{}');
-    const masterFields = lastResponse.masterFields || [];
-
-    // Normalizamos el valor seleccionado para comparar
-    const valorLimpio = String(valorSeleccionado || "").trim().toUpperCase();
-
-    // 1. Buscamos la columna que sirve de "llave" de búsqueda (IDNOMBRE)
-    const columnaNombres = masterFields.find(f => 
-        f.Nombre_Tabla.startsWith(prefijoBuscado) && 
-        f.Encabezado_Tabla === `${prefijoBuscado}IDNOMBRE`
-    );
-
-    if (!columnaNombres) return "";
-
-    // 2. Buscamos el índice comparando todo como strings
-    const filaIndex = columnaNombres.Valores_Encabezado.findIndex(v => 
-        String(v || "").trim().toUpperCase() === valorLimpio
-    );
-
-    if (filaIndex !== -1) {
-        // 3. Buscamos la columna destino (ej: TD101ID)
-        const columnaDestino = masterFields.find(f => 
-            f.Nombre_Tabla.startsWith(prefijoBuscado) && 
-            f.Encabezado_Tabla === columnaCalculada
-        );
-        
-        return columnaDestino ? columnaDestino.Valores_Encabezado[filaIndex] : "";
+            // --- PROCESAMIENTO DE NÚMEROS ---
+            const camposNumericos = ['MONTO', 'CANTIDAD', 'TOTAL', 'TD101DAT01'];
+            if (camposNumericos.some(t => k.includes(t))) {
+                if (val === "" || val === "0,00") {
+                    entries[key] = 0;
+                    continue;
+                }
+                if (val.includes(',')) {
+                    val = val.replace(/\./g, '').replace(',', '.');
+                } else {
+                    val = val.replace(/\s/g, '');
+                }               
+                const numericVal = parseFloat(val);
+                entries[key] = isNaN(numericVal) ? 0 : numericVal;
+            }
+        }       
+        return entries;
     }
 
-    return "";
-}
-function renderFields(config, data, isNew = false) {
-    const container = document.getElementById('editDataFormFields');
-    const tableOrigin = data.TABLA_ORIGEN || "";
-    const prefix = tableOrigin.split('_')[0].toUpperCase();
-    const tv001 = JSON.parse(localStorage.getItem('FULL_DATA_TV001') || '[]');
-    const selectHydrations = [];
-    const excludedIDTables = ['TD101', 'TD102', 'TD201'];
+    function resultadoBuscarX(valorSeleccionado, columnaCalculada, prefijoBuscado) {
+        const lastResponse = JSON.parse(localStorage.getItem('LAST_QUERY_RESPONSE') || '{}');
+        const masterFields = lastResponse.masterFields || [];
 
-    const actionInput = document.getElementById('formAction');
-    const isInsertAction = actionInput?.value === "registerDynamicDataTD";
-    const rawStatus = data[`${prefix}TYPEREG`] || "Registrado";
+        // Normalizamos el valor seleccionado para comparar
+        const valorLimpio = String(valorSeleccionado || "").trim().toUpperCase();
 
-    container.innerHTML = Object.keys(config).map(colId => {
-        const field = config[colId];
-        const cleanId = colId.toUpperCase().trim();
-        const isTableID = cleanId === `${prefix}ID`;
+        // 1. Buscamos la columna que sirve de "llave" de búsqueda (IDNOMBRE)
+        const columnaNombres = masterFields.find(f => 
+            f.Nombre_Tabla.startsWith(prefijoBuscado) && 
+            f.Encabezado_Tabla === `${prefijoBuscado}IDNOMBRE`
+        );
 
-        const configVisible = field.visible !== undefined && String(field.visible).trim() !== "";
-        const configEditable = field.editable === true || String(field.editable).toLowerCase() === "true";
-        const configCalculated = field.Es_Calculado === true || String(field.Es_Calculado).toLowerCase() === "true";
-        const configRequired = field.Es_Obligatorio === true || String(field.Es_Obligatorio).toLowerCase() === "true";
+        if (!columnaNombres) return "";
 
-        if (!configVisible && !isTableID) return '';
+        // 2. Buscamos el índice comparando todo como strings
+        const filaIndex = columnaNombres.Valores_Encabezado.findIndex(v => 
+            String(v || "").trim().toUpperCase() === valorLimpio
+        );
 
-        let value = (data && data[colId] !== undefined) ? data[colId] : '';
-        const isDateOnly = cleanId.includes('FECHA');
-        const isNIF = cleanId.endsWith('NIF');
-
-        const canEdit = !isTableID && configEditable && !configCalculated;
-        const isRequired = configRequired && canEdit;
-
-        // Limpieza de valores
-        if (typeof value === 'string' && value.startsWith('=')) value = '';
-        if (isDateOnly && value) value = String(value).split('T')[0];
-        if (!isNIF && !isDateOnly && value !== '' && !isNaN(value) && typeof value !== 'boolean') {
-            const numValue = parseFloat(value);
-            if (numValue % 1 !== 0) value = Number(numValue.toFixed(2));
+        if (filaIndex !== -1) {
+            // 3. Buscamos la columna destino (ej: TD101ID)
+            const columnaDestino = masterFields.find(f => 
+                f.Nombre_Tabla.startsWith(prefijoBuscado) && 
+                f.Encabezado_Tabla === columnaCalculada
+            );
+            
+            return columnaDestino ? columnaDestino.Valores_Encabezado[filaIndex] : "";
         }
 
-        if (cleanId.endsWith('TYPEREG') || cleanId.includes('REGISTRODATA') || cleanId.includes('REGISTROUSER')) return '';
+        return "";
+    }
 
-        // Render ID
-        if (isTableID) {
-            if (excludedIDTables.includes(prefix) || !configVisible) {
-                return isNew ? '' : `<input type="hidden" name="${colId}" id="input-${cleanId}" value="${value}">`;
+    function renderFields(config, data, isNew = false) {
+        const container = document.getElementById('editDataFormFields');
+        const tableOrigin = data.TABLA_ORIGEN || "";
+        const prefix = tableOrigin.split('_')[0].toUpperCase();
+        const tv001 = JSON.parse(localStorage.getItem('FULL_DATA_TV001') || '[]');
+        const selectHydrations = [];
+        const excludedIDTables = ['TD101', 'TD102', 'TD201'];
+
+        const actionInput = document.getElementById('formAction');
+        const isInsertAction = actionInput?.value === "registerDynamicDataTD";
+        const rawStatus = data[`${prefix}TYPEREG`] || "Registrado";
+
+        container.innerHTML = Object.keys(config).map(colId => {
+            const field = config[colId];
+            const cleanId = colId.toUpperCase().trim();
+            const isTableID = cleanId === `${prefix}ID`;
+
+            // --- AJUSTE QUIRÚRGICO DE VISIBILIDAD ---
+            const isNombreC = cleanId.endsWith('NOMBREC') || cleanId.endsWith('NOMBREL') || cleanId.endsWith('NOMBREM');
+            const configVisible = (field.visible !== undefined && String(field.visible).trim() !== "") || isNombreC;
+            
+            const configEditable = field.editable === true || String(field.editable).toLowerCase() === "true";
+            const configCalculated = field.Es_Calculado === true || String(field.Es_Calculado).toLowerCase() === "true";
+            const configRequired = field.Es_Obligatorio === true || String(field.Es_Obligatorio).toLowerCase() === "true";
+
+            // Si no es visible y no es el ID ni un campo de NOMBRE calculado, lo ignoramos
+            if (!configVisible && !isTableID) return '';
+
+            let value = (data && data[colId] !== undefined) ? data[colId] : '';
+            const isDateOnly = cleanId.includes('FECHA');
+            const isNIF = cleanId.endsWith('NIF');
+
+            // canEdit: Bloqueamos si es ID, si el config dice no editable, o si es un campo calculado (como NOMBREC)
+            const canEdit = !isTableID && configEditable && !configCalculated;
+            const isRequired = configRequired && canEdit;
+
+            // Limpieza de valores
+            if (typeof value === 'string' && value.startsWith('=')) value = '';
+            if (isDateOnly && value) value = String(value).split('T')[0];
+            if (!isNIF && !isDateOnly && value !== '' && !isNaN(value) && typeof value !== 'boolean') {
+                const numValue = parseFloat(value);
+                if (numValue % 1 !== 0) value = Number(numValue.toFixed(2));
             }
-            const displayId = (isInsertAction || isNew) ? "*******" : value;
-            const isPlaceholderId = displayId === "*******";
-            return `
-                <div class="border-b border-gray-700/40 py-1">
-                    <span class="text-[10px] font-bold text-orange-400 uppercase block -mb-1">${field.label || 'ID Registro'}</span>
-                    <div class="flex items-center justify-between min-h-[32px]">
-                        <input type="text" name="${colId}" id="input-${cleanId}" value="${displayId}" readonly data-permanent-lock="true"
-                            class="text-[22px] ${displayId === "*******" ? 'text-orange-500/60' : 'text-blue-300'} font-bold bg-transparent border-none p-0 m-0 w-full cursor-default outline-none">
-                        ${(displayId !== "*******") ? `<span id="badge-status-edit" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold whitespace-nowrap">${rawStatus}</span>` : ''}
-                    
-                        ${isPlaceholderId 
-                            ? '<span class="text-[10px] text-orange-500/80 italic font-bold uppercase whitespace-nowrap tracking-tighter pb-3 pr-12">Auto-Asignado</span>'
-                            : ""//`<span id="badge-status-edit" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold whitespace-nowrap">""${rawStatus}""</span>`
-                        }
-                    </div>
-                </div>`;
-        }
 
-        // Selectores
-        const masterMatch = tv001.filter(row => row.Encabezado_Tabla?.toUpperCase().trim() === cleanId);
-        if (masterMatch.length > 0 && canEdit) {
-            const selectId = `select-${cleanId}`;
-            selectHydrations.push({ id: selectId, options: masterMatch.map(m => m.Valores_Encabezado), current: value, isDuplicate: (isInsertAction && value !== "") });
+            // Filtro de campos de sistema
+            if (cleanId.endsWith('TYPEREG') || cleanId.includes('REGISTRODATA') || cleanId.includes('REGISTROUSER')) return '';
+
+            // Render ID
+            if (isTableID) {
+                if (excludedIDTables.includes(prefix) || !configVisible) {
+                    return isNew ? '' : `<input type="hidden" name="${colId}" id="input-${cleanId}" value="${value}">`;
+                }
+                const displayId = (isInsertAction || isNew) ? "*******" : value;
+                const isPlaceholderId = displayId === "*******";
+                return `
+                    <div class="border-b border-gray-700/40 py-1">
+                        <span class="text-[10px] font-bold text-orange-400 uppercase block -mb-1">${field.label || 'ID Registro'}</span>
+                        <div class="flex items-center justify-between min-h-[32px]">
+                            <input type="text" name="${colId}" id="input-${cleanId}" value="${displayId}" readonly data-permanent-lock="true"
+                                class="text-[22px] ${displayId === "*******" ? 'text-orange-500/60' : 'text-blue-300'} font-bold bg-transparent border-none p-0 m-0 w-full cursor-default outline-none">
+                            ${(displayId !== "*******") ? `<span id="badge-status-edit" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold whitespace-nowrap">${rawStatus}</span>` : ''}
+                            ${isPlaceholderId ? '<span class="text-[10px] text-orange-500/80 italic font-bold uppercase whitespace-nowrap tracking-tighter pb-3 pr-12">Auto-Asignado</span>' : ""}
+                        </div>
+                    </div>`;
+            }
+
+            // Selectores (Hidratación)
+            const masterMatch = tv001.filter(row => row.Encabezado_Tabla?.toUpperCase().trim() === cleanId);
+            if (masterMatch.length > 0 && canEdit) {
+                const selectId = `select-${cleanId}`;
+                selectHydrations.push({ id: selectId, options: masterMatch.map(m => m.Valores_Encabezado), current: value, isDuplicate: (isInsertAction && value !== "") });
+                return `
+                    <div class="border-b border-gray-700/40 py-1">
+                        <div class="flex justify-between items-center -mb-1">
+                            <span class="text-[10px] font-bold text-blue-400 uppercase block">${field.label}</span>
+                            ${isRequired ? '<span class="text-[9px] text-red-400 font-bold italic animate-pulse">REQUERIDO</span>' : ''}
+                        </div>
+                        <div class="flex items-center h-[32px]">
+                            <select name="${colId}" id="${selectId}" ${isRequired ? 'required' : ''} class="text-[16px] text-gray-200 font-medium w-full bg-transparent outline-none p-0 appearance-none cursor-pointer">
+                                <option value="${value}">${value || '-- Seleccionar --'}</option>
+                            </select>
+                        </div>
+                    </div>`;
+            }
+
+            // Campos Estándar (NOMBREC caerá aquí)
+            let inputType = (isDateOnly && canEdit) ? "date" : "text";
+            // Estilo: Si no es editable (calculado), usamos azul/itálica
+            const textStyleClass = !canEdit ? 'text-blue-400 opacity-90 italic' : 'text-yellow-200';
+            const labelStyleClass = !canEdit ? 'text-gray-500 font-bold' : 'text-blue-400 font-bold';
+
             return `
                 <div class="border-b border-gray-700/40 py-1">
-                    <div class="flex justify-between items-center -mb-1">
-                        <span class="text-[10px] font-bold text-blue-400 uppercase block">${field.label}</span>
-                        ${isRequired ? '<span class="text-[9px] text-red-400 font-bold italic animate-pulse">REQUERIDO</span>' : ''}
+                    <div class="flex justify-between items-center -mb-0.5">
+                        <span class="text-[10px] ${labelStyleClass} uppercase block">${field.label}</span>
+                        ${isRequired ? '<span class="text-[10px] text-red-400 font-bold italic animate-pulse pr-12">OBLIGATORIO</span>' : ''}
                     </div>
                     <div class="flex items-center h-[32px]">
-                        <select name="${colId}" id="${selectId}" ${isRequired ? 'required' : ''} class="text-[16px] text-gray-200 font-medium w-full bg-transparent outline-none p-0 appearance-none cursor-pointer">
-                            <option value="${value}">${value || '-- Seleccionar --'}</option>
-                        </select>
+                        <input type="${inputType}" name="${colId}" id="input-${cleanId}" value="${value}" 
+                            ${!canEdit ? 'readonly tabindex="-1" data-permanent-lock="true"' : ''} 
+                            ${isRequired ? 'required' : ''} 
+                            class="text-[16px] font-medium w-full bg-transparent outline-none p-0 focus:ring-0 scheme-dark 
+                            ${textStyleClass} ${!canEdit ? 'cursor-default' : ''}">
                     </div>
                 </div>`;
+        }).join('');
+
+        // --- LÓGICA POST-RENDER ---
+        const inputH = document.getElementById('input-typereg-edit');
+        if (inputH) {
+            inputH.name = `${prefix}TYPEREG`; 
+            inputH.value = rawStatus; 
+            if (typeof actualizarVisualizacionStatus === 'function') {
+                actualizarVisualizacionStatus('edit', rawStatus);
+            }
         }
 
-        // Campos Estándar
-        let inputType = (isDateOnly && canEdit) ? "date" : "text";
-        const isNombreC = cleanId.includes('NOMBREC');
-        const isBlockedXX = !canEdit || isNombreC;
+        setTimeout(() => {
+            if (typeof toggleFormLock === 'function') {
+                toggleFormLock(rawStatus === "Bloqueado");
+            }
+        }, 100);
 
-        const textStyleClass = !canEdit ? 'text-blue-400 opacity-90' : 'text-yellow-200';
-        const labelStyleClass = !canEdit ? 'text-gray-500 font-bold' : 'text-blue-400 font-bold';
+        if (window.lucide) lucide.createIcons();
 
-        return `
-            <div class="border-b border-gray-700/40 py-1">
-                <div class="flex justify-between items-center -mb-0.5">
-                    <span class="text-[10px] ${labelStyleClass} uppercase block">${field.label}</span>
-                    ${isRequired ? '<span class="text-[10px] text-red-400 font-bold italic animate-pulse pr-12">OBLIGATORIO</span>' : ''}
-                </div>
-                <div class="flex items-center h-[32px]">
-                    <input type="${inputType}" name="${colId}" id="input-${cleanId}" value="${value}" 
-                        ${!canEdit ? 'readonly tabindex="-1" data-permanent-lock="true"' : ''} 
-                        ${isRequired ? 'required' : ''} 
-                        class="text-[16px] font-medium w-full bg-transparent outline-none p-0 focus:ring-0 scheme-dark 
-                        ${textStyleClass} ${!canEdit ? 'cursor-default' : ''}">
+        // Hidratación
+        if (typeof hydrateAllSelects === 'function') {
+            hydrateAllSelects(selectHydrations);
+            selectHydrations.forEach(sh => {
+                const selectEl = document.getElementById(sh.id);
+                if (selectEl) {
+                    selectEl.addEventListener('change', (e) => {
+                        const valorSelected = String(e.target.value || "").trim();
+                        const prefijoSelector = sh.id.replace('select-', '').substring(0, 5).toUpperCase();
+                        Object.keys(config).forEach(colIdCalc => {
+                            const conf = config[colIdCalc];
+                            const cleanIdCalc = colIdCalc.toUpperCase().trim();
+                            if ((conf.Es_Calculado === true || String(conf.Es_Calculado).toLowerCase() === "true") && cleanIdCalc.startsWith(prefijoSelector)) {
+                                const inputDest = document.getElementById(`input-${cleanIdCalc}`);
+                                if (inputDest) {
+                                    inputDest.value = resultadoBuscarX(valorSelected, colIdCalc, prefijoSelector);
+                                }
+                            }
+                        });
+                    });
+                }
+            });
+        }
+
+        // --- DISPARADOR DE CÁLCULO AUTOMÁTICO ---
+        if (typeof setupNombreCAutoCalculate === 'function') {
+            setTimeout(() => {
+                setupNombreCAutoCalculate(prefix);
+                const nombreInput = document.querySelector(`[id$="DAT01"]`);
+                // Solo disparamos el input si es un registro nuevo para forzar el cálculo inicial
+                if (nombreInput && isInsertAction) {
+                    nombreInput.dispatchEvent(new Event('input'));
+                }
+            }, 200);
+        }
+    }
+
+    function renderProfile() {
+        const config = JSON.parse(localStorage.getItem(STORAGE_CONFIG) || '{}');
+        const data = JSON.parse(localStorage.getItem(STORAGE_DATA) || '{}');
+        const container = document.getElementById('perfilBodyContent');
+        if (!container) return;
+        
+        const prefix = (data.TABLA_ORIGEN || "").split('_')[0].toUpperCase();
+        const excludedIDTables = ['TD101', 'TD102', 'TD201'];
+        const duplicateBtn = document.getElementById('btn-duplicate-record');
+        
+        if (duplicateBtn) {
+            duplicateBtn.classList.remove('hidden');
+            duplicateBtn.style.display = 'block';
+        }
+
+        // Definición de Status para el ID (Sincronizado con renderFields)
+        const rawStatus = data[`${prefix}TYPEREG`] || "Registrado";
+        const isActuallyBlocked = rawStatus === "Bloqueado";
+        const isBlocked = rawStatus.toUpperCase() === 'BLOQUEADO';
+        const badgeHtml = `<span class="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 uppercase font-bold">Bloqueado</span>`;
+
+        const statusControlHtml = `
+            <div class="flex items-center gap-3">
+                <span id="badge-status" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold ${isActuallyBlocked ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}">
+                    ${rawStatus}
+                </span>
+                <input type="hidden" name="${prefix}TYPEREG" id="input-typereg" value="${rawStatus}">
+                <div class="w-8 h-8 flex items-center justify-center">
+                    <i data-lucide="${isActuallyBlocked ? 'lock' : 'check-circle'}" class="w-6 h-6 ${isActuallyBlocked ? 'text-red-400' : 'text-green-400'}"></i>
                 </div>
             </div>`;
-    }).join('');
 
-    // --- LÓGICA POST-RENDER ---
-    const inputH = document.getElementById('input-typereg-edit');
-    if (inputH) {
-        inputH.name = `${prefix}TYPEREG`; 
-        inputH.value = rawStatus; 
-        if (typeof actualizarVisualizacionStatus === 'function') {
-            actualizarVisualizacionStatus('edit', rawStatus);
-        }
-    }
+        container.innerHTML = Object.keys(config).map(colId => {
+            const field = config[colId];
+            const cleanId = colId.toUpperCase().trim();
+            const isTableID = cleanId === `${prefix}ID`;
 
-    // Sincronizar bloqueo inicial
-    setTimeout(() => {
-        if (typeof toggleFormLock === 'function') {
-            toggleFormLock(rawStatus === "Bloqueado");
-        }
-    }, 100);
+            // --- FILTRO DE VISIBILIDAD (Sincronizado con TABLE_CONFIG) ---
+            const isVisibleAttr = field.visible && String(field.visible).trim() !== "";
+            // Si no es visible y no es la PK, lo ignoramos
+            if (!isVisibleAttr && !isTableID) return '';
 
-    if (window.lucide) lucide.createIcons();
+            const value = (data && data[colId] !== undefined) ? data[colId] : '';
+            const isIdNombre = cleanId === `${prefix}IDNOMBRE`;
+            const isExcluded = excludedIDTables.includes(prefix);
+            const isNew = false; 
 
-    // Hidratación de selects y cálculos
-    if (typeof hydrateAllSelects === 'function') {
-        hydrateAllSelects(selectHydrations);
-        selectHydrations.forEach(sh => {
-            const selectEl = document.getElementById(sh.id);
-            if (selectEl) {
-                selectEl.addEventListener('change', (e) => {
-                    const valorSelected = String(e.target.value || "").trim();
-                    const prefijoSelector = sh.id.replace('select-', '').substring(0, 5).toUpperCase();
-                    Object.keys(config).forEach(colIdCalc => {
-                        const conf = config[colIdCalc];
-                        if ((conf.Es_Calculado === true || String(conf.Es_Calculado).toLowerCase() === "true") && colIdCalc.toUpperCase().startsWith(prefijoSelector)) {
-                            const inputDest = document.getElementById(`input-${colIdCalc.toUpperCase().trim()}`);
-                            if (inputDest) {
-                                inputDest.value = resultadoBuscarX(valorSelected, colIdCalc, prefijoSelector);
-                            }
-                        }
-                    });
-                });
-            }
-        });
-    }
-    
-    if (typeof setupNombreCAutoCalculate === 'function') {
-        setTimeout(() => {
-            setupNombreCAutoCalculate(prefix);
-            const nombreInput = document.querySelector(`[id$="DAT01"]`);
-            if (nombreInput && isInsertAction) nombreInput.dispatchEvent(new Event('input'));
-        }, 200);
-    }
-}
+            // Exclusiones técnicas de sistema
+            if (cleanId.endsWith('TYPEREG') || cleanId.includes('REGISTRODATA') || cleanId.includes('REGISTROUSER')) return '';
 
-function renderProfile() {
-    const config = JSON.parse(localStorage.getItem(STORAGE_CONFIG) || '{}');
-    const data = JSON.parse(localStorage.getItem(STORAGE_DATA) || '{}');
-    const container = document.getElementById('perfilBodyContent');
-    if (!container) return;
-    
-    const prefix = (data.TABLA_ORIGEN || "").split('_')[0].toUpperCase();
-    const excludedIDTables = ['TD101', 'TD102', 'TD201'];
-    const duplicateBtn = document.getElementById('btn-duplicate-record');
-    
-    if (duplicateBtn) {
-        duplicateBtn.classList.remove('hidden');
-        duplicateBtn.style.display = 'block';
-    }
+            // 1. LÓGICA DE ID (REESTRUCTURADA)
+            if (isTableID) {
+                // Si es tabla excluida o viene marcado como no visible, no generamos fila visual
+                if (isExcluded || !isVisibleAttr) {
+                    return isNew ? '' : `<input type="hidden" name="${colId}" id="input-${cleanId}" value="${value}">`;
+                }
 
-    // Definición de Status para el ID (Sincronizado con renderFields)
-    const rawStatus = data[`${prefix}TYPEREG`] || "Registrado";
-    const isActuallyBlocked = rawStatus === "Bloqueado";
-    const isBlocked = rawStatus.toUpperCase() === 'BLOQUEADO';
-    const badgeHtml = `<span class="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 uppercase font-bold">Bloqueado</span>`;
-
-    const statusControlHtml = `
-        <div class="flex items-center gap-3">
-            <span id="badge-status" class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold ${isActuallyBlocked ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}">
-                ${rawStatus}
-            </span>
-            <input type="hidden" name="${prefix}TYPEREG" id="input-typereg" value="${rawStatus}">
-            <div class="w-8 h-8 flex items-center justify-center">
-                <i data-lucide="${isActuallyBlocked ? 'lock' : 'check-circle'}" class="w-6 h-6 ${isActuallyBlocked ? 'text-red-400' : 'text-green-400'}"></i>
-            </div>
-        </div>`;
-
-    container.innerHTML = Object.keys(config).map(colId => {
-        const field = config[colId];
-        const cleanId = colId.toUpperCase().trim();
-        const isTableID = cleanId === `${prefix}ID`;
-
-        // --- FILTRO DE VISIBILIDAD (Sincronizado con TABLE_CONFIG) ---
-        const isVisibleAttr = field.visible && String(field.visible).trim() !== "";
-        // Si no es visible y no es la PK, lo ignoramos
-        if (!isVisibleAttr && !isTableID) return '';
-
-        const value = (data && data[colId] !== undefined) ? data[colId] : '';
-        const isIdNombre = cleanId === `${prefix}IDNOMBRE`;
-        const isExcluded = excludedIDTables.includes(prefix);
-        const isNew = false; 
-
-        // Exclusiones técnicas de sistema
-        if (cleanId.endsWith('TYPEREG') || cleanId.includes('REGISTRODATA') || cleanId.includes('REGISTROUSER')) return '';
-
-        // 1. LÓGICA DE ID (REESTRUCTURADA)
-        if (isTableID) {
-            // Si es tabla excluida o viene marcado como no visible, no generamos fila visual
-            if (isExcluded || !isVisibleAttr) {
-                return isNew ? '' : `<input type="hidden" name="${colId}" id="input-${cleanId}" value="${value}">`;
+                return `
+                    <div class="border-b border-gray-700/40 py-1">
+                        <span class="text-[10px] font-bold text-orange-400 uppercase block -mb-1">${field.label || 'ID Registro'}</span>
+                        <div class="flex items-center justify-between min-h-[32px]">
+                            <input type="text" name="${colId}" id="input-${cleanId}" value="${value}" readonly 
+                                class="text-[22px] text-blue-300 font-bold bg-transparent outline-none border-none focus:ring-0 p-0 m-0 w-full cursor-default">
+                            ${statusControlHtml}
+                        </div>
+                    </div>`;
             }
 
-            return `
-                <div class="border-b border-gray-700/40 py-1">
-                    <span class="text-[10px] font-bold text-orange-400 uppercase block -mb-1">${field.label || 'ID Registro'}</span>
-                    <div class="flex items-center justify-between min-h-[32px]">
-                        <input type="text" name="${colId}" id="input-${cleanId}" value="${value}" readonly 
-                            class="text-[22px] text-blue-300 font-bold bg-transparent outline-none border-none focus:ring-0 p-0 m-0 w-full cursor-default">
-                        ${statusControlHtml}
-                    </div>
-                </div>`;
-        }
+            // 2. FORMATEO Y LÓGICA DE CAMPOS REGULARES
+            const formattedValue = typeof getFormattedValue === 'function' ? getFormattedValue(colId, value) : value;
+            
+            // El badge de bloqueado solo se muestra en el campo principal si el registro está bloqueado
+            let shouldShowBadge = isBlocked && ((isTableID && !isExcluded) || (isIdNombre && isExcluded));
+            
+            // Jerarquía visual de textos
+            const isCalculated = field.Es_Calculado === true || String(field.Es_Calculado).toLowerCase() === "calc";
+            const isHighPriority = cleanId.includes('NOMBREC') || cleanId.includes('DAT01') || isIdNombre;
 
-        // 2. FORMATEO Y LÓGICA DE CAMPOS REGULARES
-        const formattedValue = typeof getFormattedValue === 'function' ? getFormattedValue(colId, value) : value;
-        
-        // El badge de bloqueado solo se muestra en el campo principal si el registro está bloqueado
-        let shouldShowBadge = isBlocked && ((isTableID && !isExcluded) || (isIdNombre && isExcluded));
-        
-        // Jerarquía visual de textos
-        const isCalculated = field.Es_Calculado === true || String(field.Es_Calculado).toLowerCase() === "calc";
-        const isHighPriority = cleanId.includes('NOMBREC') || cleanId.includes('DAT01') || isIdNombre;
+            // 3. CASO ESPECIAL GASTOS (TD202)
+            if (cleanId === 'TD202DAT01') {
+                const isFijo = String(value).trim() === "Fijo";
+                return `
+                    <div class="border-b border-gray-700/40 py-1"> 
+                        <span class="text-[10px] font-bold text-blue-400/60 uppercase block -mb-0.5">${field.label}</span>
+                        <div class="flex items-center h-[32px]">
+                            <span class="text-[22px] text-blue-300 font-bold leading-tight">
+                                ${formattedValue || '---'}
+                            </span>
+                            <div class="ml-2 flex items-center justify-center p-1 rounded-full ${isFijo ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-purple-500/20 text-purple-400 border border-purple-500/30'}">
+                                <i data-lucide="${isFijo ? 'lock' : 'calendar-clock'}" class="w-3.5 h-3.5"></i>
+                            </div>
+                        </div>
+                    </div>`;
+            }
 
-        // 3. CASO ESPECIAL GASTOS (TD202)
-        if (cleanId === 'TD202DAT01') {
-            const isFijo = String(value).trim() === "Fijo";
+            // 4. CLASES DE TEXTO PARA MODO VIEW
+            let textClass = 'text-[16px] text-gray-200 font-medium w-full'; // Estándar
+            if (isHighPriority || isCalculated) {
+                textClass = 'text-[16px] text-blue-300 font-medium w-full'; // Azul para calculados o prioridad
+            }
+
             return `
                 <div class="border-b border-gray-700/40 py-1"> 
-                    <span class="text-[10px] font-bold text-blue-400/60 uppercase block -mb-0.5">${field.label}</span>
+                    <span class="text-[10px] font-bold ${isTableID ? 'text-orange-400/80' : 'text-blue-400/60'} uppercase block -mb-0.5">
+                        ${field.label}
+                    </span>
                     <div class="flex items-center h-[32px]">
-                        <span class="text-[22px] text-blue-300 font-bold leading-tight">
+                        <span class="${textClass} leading-tight">
                             ${formattedValue || '---'}
                         </span>
-                        <div class="ml-2 flex items-center justify-center p-1 rounded-full ${isFijo ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-purple-500/20 text-purple-400 border border-purple-500/30'}">
-                            <i data-lucide="${isFijo ? 'lock' : 'calendar-clock'}" class="w-3.5 h-3.5"></i>
-                        </div>
+                        ${shouldShowBadge ? badgeHtml : ''}
                     </div>
                 </div>`;
-        }
-
-        // 4. CLASES DE TEXTO PARA MODO VIEW
-        let textClass = 'text-[16px] text-gray-200 font-medium w-full'; // Estándar
-        if (isHighPriority || isCalculated) {
-            textClass = 'text-[16px] text-blue-300 font-medium w-full'; // Azul para calculados o prioridad
-        }
-
-        return `
-            <div class="border-b border-gray-700/40 py-1"> 
-                <span class="text-[10px] font-bold ${isTableID ? 'text-orange-400/80' : 'text-blue-400/60'} uppercase block -mb-0.5">
-                    ${field.label}
-                </span>
-                <div class="flex items-center h-[32px]">
-                    <span class="${textClass} leading-tight">
-                        ${formattedValue || '---'}
-                    </span>
-                    ${shouldShowBadge ? badgeHtml : ''}
-                </div>
-            </div>`;
-    }).join('');
-    
-    if (window.lucide) lucide.createIcons();
-}
+        }).join('');
+        
+        if (window.lucide) lucide.createIcons();
+    }
 
     async function executeSubmit(payload, customTitle = '¡Éxito!') {
         // 1. Desplazar la pantalla al inicio para asegurar visibilidad del loader
@@ -1127,103 +1132,104 @@ function renderProfile() {
         }
     }
     
-async function handleEditSubmit(e) {
-    e.preventDefault();
-    const currentData = JSON.parse(localStorage.getItem(STORAGE_DATA) || '{}');
-    const config = JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}');
-    const prefix = currentData.TABLA_ORIGEN.split('_')[0].toUpperCase();
-
-    let payload = {
-        action: "editDynamicDataTD",
-        TABLA_DESTINO: currentData.TABLA_ORIGEN,
-        CAMPO_CLAVE: `${prefix}ID`,
-        ...sanitizePayload(new FormData(e.target)),
-        [`${prefix}TYPEREG`]: document.getElementById('input-typereg-edit')?.value || currentData[`${prefix}TYPEREG`],
-        [`${prefix}RegistroUser`]: localStorage.getItem(KEYS.USUARIO_ID) || "User"
-    };
-
-    console.log("🔍 PAYLOAD ANTES DEL FILTRO:", { ...payload });
-
-    Object.keys(payload).forEach(key => {
-        const campoConfig = config[key];
-        if (campoConfig && (campoConfig.Es_Calculado === true || campoConfig.Es_Calculado === "true")) {
-            console.log(`🚫 ELIMINANDO DEL PAYLOAD: ${key}`);
-            delete payload[key];
-        }
-    });
-
-    console.log("🚀 PAYLOAD FINAL (A ENVIAR):", payload);
-    
-    // Verificación visual en la red
-    const params = new URLSearchParams(payload);
-    console.log("📡 STRING FINAL DE ENVÍO:", params.toString());
-
-    await executeSubmit(payload, 'Registro Procesado');
-}
-
-async function handleInsertSubmit(e) {
-    e.preventDefault();
-    try {
-        // 1. Cargar configuraciones y datos de contexto
+    async function handleEditSubmit(e) {
+        e.preventDefault();
+        const currentData = JSON.parse(localStorage.getItem(STORAGE_DATA) || '{}');
         const config = JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}');
-        const storageDataRaw = localStorage.getItem('TABLE_DATA'); // Confirmado por el usuario
-        const storageData = JSON.parse(storageDataRaw || '{}');
+        const prefix = currentData.TABLA_ORIGEN.split('_')[0].toUpperCase();
 
-        // 2. DETERMINAR LA TABLA (Prioridad absoluta a TABLE_DATA ya que vienes de la SPA)
-        let tablaDestino = storageData.TABLA_ORIGEN || localStorage.getItem('LAST_TABLE_VIEWED');
-
-        if (!tablaDestino || tablaDestino === "undefined") {
-            throw new Error("No se pudo determinar la tabla de destino en TABLE_DATA.");
-        }
-
-        // 3. OBTENER PREFIJO (Ej: TD213)
-        const prefix = tablaDestino.split('_')[0].toUpperCase();
-
-        // 4. CONSTRUCCIÓN DEL PAYLOAD
-        // Extraemos los datos del formulario y añadimos los metadatos necesarios
         let payload = {
-            action: document.getElementById('formAction')?.value || "registerDynamicDataTD",
-            TABLA_DESTINO: tablaDestino,
+            action: "editDynamicDataTD",
+            TABLA_DESTINO: currentData.TABLA_ORIGEN,
             CAMPO_CLAVE: `${prefix}ID`,
             ...sanitizePayload(new FormData(e.target)),
-            // Forzamos campos de control para el nuevo registro
-            [`${prefix}TYPEREG`]: "Registrado",
-            [`${prefix}RegistroUser`]: localStorage.getItem('USUARIO_ID') || "1009"
+            [`${prefix}TYPEREG`]: document.getElementById('input-typereg-edit')?.value || currentData[`${prefix}TYPEREG`],
+            [`${prefix}RegistroUser`]: localStorage.getItem(KEYS.USUARIO_ID) || "User"
         };
 
-        console.log("🔍 [DEBUG] Payload inicial recolectado:", { ...payload });
+        console.log("🔍 PAYLOAD ANTES DEL FILTRO:", { ...payload });
 
-        // 5. FILTRO DE CAMPOS CALCULADOS
-        // Esto evita que campos como NOMBREC (calculado) viajen al backend
         Object.keys(payload).forEach(key => {
-            const fieldConf = config[key];
-            if (fieldConf) {
-                const esCalculado = fieldConf.Es_Calculado === true || 
-                                    String(fieldConf.Es_Calculado).toLowerCase() === "true";
-                if (esCalculado) {
-                    console.log(`🚫 Excluyendo campo calculado del envío: ${key}`);
-                    delete payload[key];
-                }
+            const campoConfig = config[key];
+            if (campoConfig && (campoConfig.Es_Calculado === true || campoConfig.Es_Calculado === "true")) {
+                console.log(`🚫 ELIMINANDO DEL PAYLOAD: ${key}`);
+                delete payload[key];
             }
         });
 
-        // 6. ASEGURAR ID PARA NUEVO REGISTRO
-        // Si el ID viene vacío o con asteriscos, nos aseguramos de que el backend sepa que es nuevo
-        if (!payload[`${prefix}ID`] || payload[`${prefix}ID`] === "*******") {
-            payload[`${prefix}ID`] = "*******";
-        }
+        console.log("🚀 PAYLOAD FINAL (A ENVIAR):", payload);
+        
+        // Verificación visual en la red
+        const params = new URLSearchParams(payload);
+        console.log("📡 STRING FINAL DE ENVÍO:", params.toString());
 
-        console.log("🚀 [OK] Enviando Payload Final:", payload);
-
-        // 7. EJECUCIÓN DEL ENVÍO
-        await executeSubmit(payload, 'Registro Creado Satisfactoriamente');
-
-    } catch (error) {
-        console.error("❌ Error Crítico en handleInsertSubmit:", error.message);
-        // Alert estándar para evitar errores de librerías no cargadas (Swal)
-        alert("Atención: " + error.message);
+        await executeSubmit(payload, 'Registro Procesado');
     }
-}
+
+    async function handleInsertSubmit(e) {
+        e.preventDefault();
+        try {
+            // 1. Cargar configuraciones y datos de contexto
+            const config = JSON.parse(localStorage.getItem('TABLE_CONFIG') || '{}');
+            const storageDataRaw = localStorage.getItem('TABLE_DATA'); // Confirmado por el usuario
+            const storageData = JSON.parse(storageDataRaw || '{}');
+
+            // 2. DETERMINAR LA TABLA (Prioridad absoluta a TABLE_DATA ya que vienes de la SPA)
+            let tablaDestino = storageData.TABLA_ORIGEN || localStorage.getItem('LAST_TABLE_VIEWED');
+
+            if (!tablaDestino || tablaDestino === "undefined") {
+                throw new Error("No se pudo determinar la tabla de destino en TABLE_DATA.");
+            }
+
+            // 3. OBTENER PREFIJO (Ej: TD213)
+            const prefix = tablaDestino.split('_')[0].toUpperCase();
+
+            // 4. CONSTRUCCIÓN DEL PAYLOAD
+            // Extraemos los datos del formulario y añadimos los metadatos necesarios
+            let payload = {
+                action: document.getElementById('formAction')?.value || "registerDynamicDataTD",
+                TABLA_DESTINO: tablaDestino,
+                CAMPO_CLAVE: `${prefix}ID`,
+                ...sanitizePayload(new FormData(e.target)),
+                // Forzamos campos de control para el nuevo registro
+                [`${prefix}TYPEREG`]: "Registrado",
+                [`${prefix}RegistroUser`]: localStorage.getItem('USUARIO_ID') || "1009"
+            };
+
+            console.log("🔍 [DEBUG] Payload inicial recolectado:", { ...payload });
+
+            // 5. FILTRO DE CAMPOS CALCULADOS
+            // Esto evita que campos como NOMBREC (calculado) viajen al backend
+            Object.keys(payload).forEach(key => {
+                const fieldConf = config[key];
+                if (fieldConf) {
+                    const esCalculado = fieldConf.Es_Calculado === true || 
+                                        String(fieldConf.Es_Calculado).toLowerCase() === "true";
+                    if (esCalculado) {
+                        console.log(`🚫 Excluyendo campo calculado del envío: ${key}`);
+                        delete payload[key];
+                    }
+                }
+            });
+
+            // 6. ASEGURAR ID PARA NUEVO REGISTRO
+            // Si el ID viene vacío o con asteriscos, nos aseguramos de que el backend sepa que es nuevo
+            if (!payload[`${prefix}ID`] || payload[`${prefix}ID`] === "*******") {
+                payload[`${prefix}ID`] = "*******";
+            }
+
+            console.log("🚀 [OK] Enviando Payload Final:", payload);
+
+            // 7. EJECUCIÓN DEL ENVÍO
+            await executeSubmit(payload, 'Registro Creado Satisfactoriamente');
+
+        } catch (error) {
+            console.error("❌ Error Crítico en handleInsertSubmit:", error.message);
+            // Alert estándar para evitar errores de librerías no cargadas (Swal)
+            alert("Atención: " + error.message);
+        }
+    }
+
     function duplicateCurrentRecord() {
         console.log("Iniciando duplicado...");
 
@@ -1319,14 +1325,14 @@ async function handleInsertSubmit(e) {
             return;
         }
 
-const pinIngresado = await showSystemModal({
-    title: 'Confirmar Eliminación',
-    text: 'Este registro será borrado permanentemente. Ingrese su Idx de Seguridad para autorizar:',
-    type: 'danger', 
-    isPrompt: true,
-    inputType: 'password', // <--- Nueva propiedad para identificar el tipo
-    placeholder: 'Ingrese su Idx...'
-});
+        const pinIngresado = await showSystemModal({
+            title: 'Confirmar Eliminación',
+            text: 'Este registro será borrado permanentemente. Ingrese su Idx de Seguridad para autorizar:',
+            type: 'danger', 
+            isPrompt: true,
+            inputType: 'password', // <--- Nueva propiedad para identificar el tipo
+            placeholder: 'Ingrese su Idx...'
+        });
 
         if (pinIngresado === null) return; 
 
