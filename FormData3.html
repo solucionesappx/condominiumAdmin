@@ -234,80 +234,120 @@
         }
         return value;
     }
-    function showSystemModal({
-        title, 
-        text, 
-        type = 'info', 
-        showCancel = false, 
-        isPrompt = false, 
-        placeholder = '...'
-    }) {
-        return new Promise(res => {
-            const m = document.getElementById('system-modal'),
-                ti = document.getElementById('sys-modal-title'),
-                te = document.getElementById('sys-modal-text'),
-                ic = document.getElementById('sys-modal-icon'),
-                ac = document.getElementById('sys-modal-actions'),
-                iCont = document.getElementById('sys-modal-input-container'),
-                input = document.getElementById('sys-modal-input');
 
-            // Configuración visual básica
-            ti.textContent = title;
-            te.textContent = text;
-            const colors = { warning: 'text-amber-400', info: 'text-blue-400', danger: 'text-red-400' },
-                icons = { warning: 'alert-triangle', info: 'info', danger: 'trash-2' };
+function toggleIdxVisibility() {
+    const inputIdx = document.getElementById('modalInputIdx');
+    const eyeIcon = document.getElementById('eyeIcon');
+    
+    if (inputIdx.type === 'password') {
+        inputIdx.type = 'text';
+        eyeIcon.setAttribute('data-lucide', 'eye-off');
+    } else {
+        inputIdx.type = 'password';
+        eyeIcon.setAttribute('data-lucide', 'eye');
+    }
+    
+    // Si usas Lucide, refrescamos el icono
+    if (window.lucide) lucide.createIcons();
+}
+
+function showSystemModal({
+    title,
+    text,
+    type = 'info',
+    showCancel = false,
+    isPrompt = false,
+    placeholder = '...',
+    inputType = 'text' // Nuevo parámetro: 'text' o 'password'
+}) {
+    return new Promise(res => {
+        const m = document.getElementById('system-modal'),
+            ti = document.getElementById('sys-modal-title'),
+            te = document.getElementById('sys-modal-text'),
+            ic = document.getElementById('sys-modal-icon'),
+            ac = document.getElementById('sys-modal-actions'),
+            iCont = document.getElementById('sys-modal-input-container'),
+            input = document.getElementById('sys-modal-input');
+
+        // 1. Configuración visual básica
+        ti.textContent = title;
+        te.textContent = text;
+        const colors = { warning: 'text-amber-400', info: 'text-blue-400', danger: 'text-red-400' },
+            icons = { warning: 'alert-triangle', info: 'info', danger: 'trash-2' };
+
+        ic.innerHTML = `<i data-lucide="${icons[type]}" class="w-12 h-12 ${colors[type]}"></i>`;
+        ac.innerHTML = '';
+
+        // 2. Manejo del Input (Prompt) con Toggle de Visibilidad
+        if (isPrompt) {
+            iCont.classList.remove('hidden');
+            iCont.className = "relative mt-4 mb-6"; // Aseguramos posición relativa para el icono y para el campo
             
-            ic.innerHTML = `<i data-lucide="${icons[type]}" class="w-12 h-12 ${colors[type]}"></i>`;
-            ac.innerHTML = '';
+            input.value = '';
+            input.type = inputType; // Asigna 'password' o 'text'
+            input.placeholder = placeholder;
             
-            // Manejo del Input (Prompt)
-            if (isPrompt) {
-                iCont.classList.remove('hidden');
-                input.value = '';
-                input.placeholder = placeholder;
-                setTimeout(() => input.focus(), 100); // Auto-focus
-            } else {
-                iCont.classList.add('hidden');
+            // Eliminamos cualquier botón de "ojo" previo si existe
+            const oldToggle = iCont.querySelector('.toggle-password-btn');
+            if (oldToggle) oldToggle.remove();
+
+            // Si es de tipo password, inyectamos el botón del ojo
+            if (inputType === 'password') {
+                const toggleBtn = document.createElement('button');
+                toggleBtn.type = "button";
+                toggleBtn.className = "toggle-password-btn absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-400 transition-colors";
+                toggleBtn.innerHTML = `<i data-lucide="eye" class="w-5 h-5"></i>`;
+                
+                toggleBtn.onclick = () => {
+                    const isPass = input.type === 'password';
+                    input.type = isPass ? 'text' : 'password';
+                    toggleBtn.innerHTML = `<i data-lucide="${isPass ? 'eye-off' : 'eye'}" class="w-5 h-5"></i>`;
+                    if (window.lucide) lucide.createIcons();
+                };
+                iCont.appendChild(toggleBtn);
             }
 
-            // Función para cerrar y resolver
-            const close = (val) => {
-                m.classList.add('hidden');
-                res(val);
-            };
-
-            // Botón Cancelar (si se requiere)
-    // --- BOTÓN CANCELAR (Rojo que pasa a Gris con borde Rojo) ---
-    if (showCancel || isPrompt) {
-        const bc = document.createElement('button');
-        // bg-red-600: Fondo inicial rojo
-        // hover:bg-gray-700: Cambia a gris al pasar el ratón
-        // hover:border-red-500 hover:border-2: Añade el borde rojo en hover
-        bc.className = 'px-4 py-2 rounded-lg bg-gray-600 text-white text-sm font-medium border-2 border-transparent hover:bg-red-700 hover:border-red-500 transition-all duration-300';
-        bc.textContent = 'Cancelar';
-        bc.onclick = () => close(isPrompt ? null : false);
-        ac.appendChild(bc);
-    }
-
-    // --- BOTÓN ACEPTAR (Azul que pasa a Rojo con borde Azul) ---
-    const bp = document.createElement('button');
-    // bg-blue-600: Fondo inicial azul
-    // hover:bg-red-600: Cambia a rojo al pasar el ratón
-    // hover:border-blue-400 hover:border-2: Añade el borde azul en hover
-    bp.className = 'px-6 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium border-2 border-transparent hover:bg-blue-800 hover:border-blue-400 transition-all duration-300';
-    bp.textContent = 'Aceptar';
-    bp.onclick = () => {
-        if (isPrompt) {
-            close(input.value);
+            setTimeout(() => input.focus(), 100);
         } else {
-            close(true);
+            iCont.classList.add('hidden');
         }
-    };
-    ac.appendChild(bp);
-            m.classList.remove('hidden');
-            if (window.lucide) lucide.createIcons();
-        });
-    }    
+
+        // 3. Función para cerrar y resolver
+        const close = (val) => {
+            // Limpiamos el tipo por defecto al cerrar para futuros usos
+            input.type = 'text'; 
+            m.classList.add('hidden');
+            res(val);
+        };
+
+        // 4. Botón Cancelar
+        if (showCancel || isPrompt) {
+            const bc = document.createElement('button');
+            bc.className = 'px-4 py-2 rounded-lg bg-gray-600 text-white text-sm font-medium border-2 border-transparent hover:bg-red-700 hover:border-red-500 transition-all duration-300';
+            bc.textContent = 'Cancelar';
+            bc.onclick = () => close(isPrompt ? null : false);
+            ac.appendChild(bc);
+        }
+
+        // 5. Botón Aceptar
+        const bp = document.createElement('button');
+        bp.className = 'px-6 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium border-2 border-transparent hover:bg-blue-800 hover:border-blue-400 transition-all duration-300';
+        bp.textContent = 'Aceptar';
+        bp.onclick = () => {
+            close(isPrompt ? input.value : true);
+        };
+        ac.appendChild(bp);
+
+        // Soporte para tecla Enter
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter') bp.click();
+        };
+
+        m.classList.remove('hidden');
+        if (window.lucide) lucide.createIcons();
+    });
+}
+
     function logout(){localStorage.clear();window.location.href='index.html'}
 
 </script>
@@ -856,6 +896,9 @@ function renderFields(config, data, isNew = false) {
 
         // Campos Estándar
         let inputType = (isDateOnly && canEdit) ? "date" : "text";
+        const isNombreC = cleanId.includes('NOMBREC');
+        const isBlockedXX = !canEdit || isNombreC;
+
         const textStyleClass = !canEdit ? 'text-blue-400 opacity-90' : 'text-yellow-200';
         const labelStyleClass = !canEdit ? 'text-gray-500 font-bold' : 'text-blue-400 font-bold';
 
@@ -915,6 +958,14 @@ function renderFields(config, data, isNew = false) {
                 });
             }
         });
+    }
+    
+    if (typeof setupNombreCAutoCalculate === 'function') {
+        setTimeout(() => {
+            setupNombreCAutoCalculate(prefix);
+            const nombreInput = document.querySelector(`[id$="DAT01"]`);
+            if (nombreInput && isInsertAction) nombreInput.dispatchEvent(new Event('input'));
+        }, 200);
     }
 }
 
@@ -1268,13 +1319,14 @@ async function handleInsertSubmit(e) {
             return;
         }
 
-        const pinIngresado = await showSystemModal({
-            title: 'Confirmar Eliminación',
-            text: 'Este registro será borrado permanentemente. Ingrese su Idx de Seguridad para autorizar:',
-            type: 'danger', 
-            isPrompt: true,
-            placeholder: 'Ingrese su Idx...'
-        });
+const pinIngresado = await showSystemModal({
+    title: 'Confirmar Eliminación',
+    text: 'Este registro será borrado permanentemente. Ingrese su Idx de Seguridad para autorizar:',
+    type: 'danger', 
+    isPrompt: true,
+    inputType: 'password', // <--- Nueva propiedad para identificar el tipo
+    placeholder: 'Ingrese su Idx...'
+});
 
         if (pinIngresado === null) return; 
 
